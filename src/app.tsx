@@ -1,20 +1,17 @@
 import { Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
-import { MDXContext } from "solid-mdx";
-
-import "./styles.css";
 import { Suspense } from "solid-js";
 
+import "./styles.css";
+
 export default function App() {
-  const components = {};
   return (
     <Router
       root={(props) => (
-        // <MDXContext.Provider value={components}>
         <Suspense>
+          {/* 入口层负责挂载文档站外壳，实际页面内容仍由文件路由驱动。 */}
           <div class="docs-shell">{props.children}</div>
         </Suspense>
-        // </MDXContext.Provider>
       )}
     >
       <FileRoutes />

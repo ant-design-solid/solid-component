@@ -1,5 +1,5 @@
 {
-  "name": "@s-components/overflow",
+  "name": "@s-components/floating",
   "version": "0.1.0-beta.1",
   "description": "",
   "type": "module",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@s-components/utils": "workspace:^",
+    "@s-components/motion": "workspace:^",
     "@s-components/polymorphic": "workspace:^"
   },
   "peerDependencies": {

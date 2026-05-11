@@ -11,7 +11,7 @@ app.config.timestamp_*.js
 .env*.local
 
 # dependencies
-/node_modules
+node_modules
 
 # IDEs and editors
 /.idea
@@ -20,11 +20,7 @@ app.config.timestamp_*.js
 *.launch
 .settings/
 
-# Temp
-gitignore
-
-# System Files
-.DS_Store
-Thumbs.db
 
 .nitro
+*.log
+.turbo

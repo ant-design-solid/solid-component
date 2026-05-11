@@ -2,16 +2,28 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "newLine": "LF",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "allowJs": true,
     "strict": true,
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": [
+      "vite/client",
+      "node",
+      "solid-js"
+    ],
     "isolatedModules": true,
-    "paths": {}
-  }
+    "paths": {},
+  },
+  "include": [
+    "*.ts",
+    "*.d.ts",
+    "packages",
+    "src"
+  ],
 }
