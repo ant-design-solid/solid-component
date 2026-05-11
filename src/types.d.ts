@@ -1,0 +1,1 @@
+import "solid-mdx/client";
