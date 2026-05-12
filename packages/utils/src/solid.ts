@@ -1,25 +1,9 @@
-import { Accessor, getOwner, JSX, onCleanup, Ref } from "solid-js";
-import { isDev } from "solid-js/web";
+export { access, tryOnCleanup, type MaybeAccessor, type Assign } from "@s-primitives/shared";
+import { JSX, Ref } from "solid-js";
 
-export type MaybeAccessor<T = any> = Accessor<T> | T;
-
-export type MaybeAccessorValue<T extends MaybeAccessor<any>> = T extends () => any
-  ? ReturnType<T>
-  : T;
-
-export type Assign<T, U> = Omit<T, keyof U> & U;
-
-export const access = <T extends MaybeAccessor<any>>(v: T): MaybeAccessorValue<T> =>
-  typeof v === "function" && !v.length ? v() : (v as any);
-
-/**
- * 不在组件内运行时会报错
- * */
-export const tryOnCleanup: typeof onCleanup = isDev
-  ? (fn) => (getOwner() ? onCleanup(fn) : fn)
-  : onCleanup;
 
 type MaybeRef<T> = Ref<T> | undefined;
+
 export function mergeRefs<T>(...refs: MaybeRef<T>[]): (el: T) => void {
   return (...args) => {
     for (const ref of refs) {
