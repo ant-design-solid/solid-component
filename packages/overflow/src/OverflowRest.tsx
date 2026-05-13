@@ -1,15 +1,14 @@
-import { JSX, Show, ValidComponent, createMemo, mergeProps, splitProps } from "solid-js";
+import { PolymorphicProps } from "@s-components/polymorphic";
+import { JSX, Show, ValidComponent, mergeProps, splitProps } from "solid-js";
 import { useOverflowRootContext } from "./OverflowContext";
-import { InternalItem, InternalItemProps } from "./OverflowItem";
-import { ElementOf } from "@s-components/polymorphic";
+import { InternalItem } from "./OverflowItem";
 
-export type OverflowRestCommonProps<T extends ValidComponent> = InternalItemProps<T> & {
+export interface OverflowRestOwnProps {
   children: JSX.Element | ((omittedCount: number) => JSX.Element);
-};
+}
 
-export type OverflowRestProps<T extends ValidComponent | HTMLElement = HTMLElement> = Partial<
-  OverflowRestCommonProps<ElementOf<T>>
->;
+export type OverflowRestProps<T extends ValidComponent = "div"> =
+  Partial<OverflowRestOwnProps>;
 
 function defaultRenderRest(omittedCount: number) {
   return `+ ${omittedCount} ...`;
@@ -19,25 +18,29 @@ const defaults = {
   children: defaultRenderRest,
 } as const;
 
-export default function OverflowRest<T extends ValidComponent>(props: OverflowRestProps<T>) {
+export const REST_ID = Symbol("overflow-rest");
+
+export default function OverflowRest<T extends ValidComponent>(
+  props: PolymorphicProps<T, OverflowRestProps<T>>,
+) {
   const rootContext = useOverflowRootContext();
   const merged = mergeProps(defaults, props as OverflowRestProps);
   const [local, rest] = splitProps(merged, ["children"]);
 
-  const omittedCount = createMemo(() => rootContext.omittedCount());
-  const display = createMemo(() => rootContext.restReady() && omittedCount() > 0);
-  const order = createMemo(() => rootContext.displayCount());
-
   return (
-    <Show when={rootContext.items().length > 0}>
+    <Show when={rootContext.renderRest()}>
       <InternalItem
+        recordId={REST_ID}
         role="rest"
-        display={display}
-        order={order}
-        itemKey={"__overflow-rest__"}
+        show={rootContext.showRest()}
+        order={rootContext.displayCount()}
+        invalidate={rootContext.invalidate()}
+        responsive={rootContext.responsive()}
         {...rest}
       >
-        {typeof local.children === "function" ? local.children(omittedCount()) : local.children}
+        {typeof local.children === "function"
+          ? local.children(rootContext.omittedCount())
+          : local.children}
       </InternalItem>
     </Show>
   );

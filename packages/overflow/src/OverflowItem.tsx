@@ -1,93 +1,181 @@
-import Polymorphic, { ElementOf, PolymorphicProps } from "@s-components/polymorphic";
-import { MaybeAccessor, mergeRefs, mergeStyle } from "@s-components/utils";
-import { access, MaybeElement } from "@s-primitives/shared";
+import Polymorphic, {
+  ElementOf,
+  PolymorphicProps,
+} from "@s-components/polymorphic";
+import { mergeRefs, mergeStyle } from "@s-components/utils";
+import { access, Optional } from "@s-primitives/shared";
 import { createResizeObserver } from "@s-primitives/web";
 import {
-  Accessor,
   createMemo,
   createSignal,
   JSX,
   mergeProps,
   onCleanup,
+  onMount,
   splitProps,
   ValidComponent,
 } from "solid-js";
 import {
+  OverflowItemContext,
+  OverflowItemId,
   OverflowItemKey,
   OverflowItemRole,
   useOverflowItemContext,
   useOverflowRootContext,
 } from "./OverflowContext";
 
-interface InternalItemCommonProps<T> {
-  ref?: T | ((el: T) => void);
+interface InternalItemOptions {
+  recordId: OverflowItemId;
+
   itemKey?: OverflowItemKey;
-  order: Accessor<number>;
+  order: number;
   role?: OverflowItemRole;
+  responsive?: boolean;
+  show?: boolean;
+  invalidate?: boolean;
 }
 
-export type InternalItemProps<T extends ValidComponent> = InternalItemCommonProps<ElementOf<T>>;
+interface InternalItemCommonProps<T = HTMLElement> {
+  ref: T | ((el: T) => void);
+  style: JSX.CSSProperties | string;
+  children: JSX.Element;
+  "aria-hidden"?: boolean;
+}
+
+export type InternalItemProps<T extends ValidComponent> = InternalItemOptions &
+  Partial<InternalItemCommonProps<ElementOf<T>>>;
 
 export function InternalItem<T extends ValidComponent>(
   props: PolymorphicProps<T, InternalItemProps<T>>,
 ) {
   const rootContext = useOverflowRootContext();
-  const [local, rest] = splitProps(props, ["order", "itemKey", "role", "ref"]);
+  const merged = mergeProps({ role: "item" }, props);
+  const [local, rest] = splitProps(merged, [
+    "recordId",
+    "order",
+    "itemKey",
+    "role",
+    "ref",
+    "style",
+    "responsive",
+    "show",
+    "invalidate",
+    "children",
+  ]);
 
-  const [itemRef, setItemRef] = createSignal<MaybeElement>();
+  const [itemRef, setItemRef] = createSignal<HTMLElement>();
   const [width, setWidth] = createSignal<number | null>(null);
-  const id = Symbol("overflow-item");
 
-  rootContext.registerItem({
-    id,
+  const show = createMemo(() => !local.responsive || local.show);
+
+  const visualOrder = createMemo(() => {
+    if (!local.responsive) {
+      return undefined;
+    }
+
+    if (local.role === "item") {
+      return local.order * 2;
+    }
+
+    const [start, end] = rootContext.visibleRange();
+
+    if (local.role === "rest") {
+      if (end < start) {
+        return rootContext.collapse() === "start" ? start * 2 - 1 : 1;
+      }
+      return rootContext.collapse() === "start" ? start * 2 - 1 : end * 2 + 1;
+    }
+
+    if (local.role === "suffix") {
+      if (end < start) {
+        return rootContext.collapse() === "start" ? start * 2 : 2;
+      }
+      return rootContext.displayCount() * 2 + 2;
+    }
+
+    return local.order;
+  });
+  const style = createMemo(() => {
+    if (local.invalidate) {
+      return local.style;
+    }
+
+    const style: JSX.CSSProperties = {
+      order: visualOrder(),
+    };
+    if (show()) {
+      style["opacity"] = 1;
+    } else {
+      style["opacity"] = 0;
+      style["height"] = 0;
+      style["overflow-y"] = "hidden";
+      style["pointer-events"] = "none";
+      style["position"] = "absolute";
+    }
+
+    return mergeStyle(local.style, style);
+  });
+
+  const record = {
+    id: local.recordId,
     key: local.itemKey,
     role: local.role,
     el: itemRef,
-    order: local.order,
+    order: createMemo(() => local.order),
     width,
+  };
+
+  rootContext.registerItem(record);
+
+  const targetRef = createMemo(() => (local.responsive ? itemRef() : null));
+  createResizeObserver(targetRef, ([entry]) => {
+    const nextWidth = (entry.target as HTMLElement).offsetWidth;
+    rootContext.batcher.enqueue(() => {
+      setWidth(nextWidth);
+    });
   });
 
-  createResizeObserver(itemRef, ([entry]) => {
-    const nextWidth = (entry.target as HTMLElement).offsetWidth;
-    setWidth(nextWidth);
-
-    if (local.role === "rest") {
-      rootContext.setRestWidth(nextWidth);
+  onMount(() => {
+    const ele = targetRef();
+    if (ele && ele.offsetWidth > 0) {
+      setWidth(ele.offsetWidth);
     }
   });
 
   onCleanup(() => {
-    if (local.role === "rest") {
-      rootContext.setRestWidth(null);
-    }
-    rootContext.unregisterItem(id);
+    rootContext.unregisterItem(local.recordId);
   });
 
-  return <Polymorphic ref={mergeRefs(local.ref, setItemRef)} {...rest} />;
+  return (
+    <Polymorphic
+      ref={mergeRefs(local.ref, setItemRef)}
+      style={style()}
+      aria-hidden={!show()}
+      {...rest}
+    >
+      {local.children}
+    </Polymorphic>
+  );
 }
 
-export interface OverflowItemCommonProps<T extends HTMLElement = HTMLElement> extends Omit<
-  InternalItemCommonProps<T>,
-  "order"
-> {
-  order: MaybeAccessor<number>;
-  itemKey: OverflowItemKey;
-  display: MaybeAccessor<boolean>;
-  style: JSX.CSSProperties | string;
-}
+export interface OverflowItemOwnProps<T extends HTMLElement = HTMLElement>
+  extends
+    Partial<InternalItemCommonProps<T>>,
+    Optional<
+      Omit<InternalItemOptions, "responsive" | "invalidate" | "recordId">,
+      "order"
+    > {}
 
-export interface OverflowItemRenderProps extends OverflowItemCommonProps {}
-
-export type OverflowItemProps<T extends ValidComponent | HTMLElement = HTMLElement> = Partial<
-  OverflowItemCommonProps<ElementOf<T>>
->;
+export type OverflowItemProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+> = OverflowItemOwnProps<ElementOf<T>>;
 
 const defaults = {
   as: "div",
 } as const;
 
-export default function OverflowItem<T extends ValidComponent | HTMLElement>(
-  props: OverflowItemProps<T>,
+export default function OverflowItem<T extends ValidComponent>(
+  props: PolymorphicProps<T, OverflowItemProps<T>>,
 ) {
   const merged = mergeProps(props, defaults);
   const [local, rest] = splitProps(merged, [
@@ -96,43 +184,30 @@ export default function OverflowItem<T extends ValidComponent | HTMLElement>(
     "itemKey",
     "order",
     "role",
-    "display",
     "style",
   ]);
 
+  const rootContext = useOverflowRootContext();
   const itemContext = useOverflowItemContext();
+  const id = itemContext?.id || Symbol(`overflow-${local.role}`);
   const order = createMemo(() => {
-    const localOrder = access(local.order);
-    return localOrder ?? itemContext?.order() ?? 0;
-  });
-  const display = createMemo(() => {
-    const localDisplay = access(local.display);
-    return localDisplay ?? itemContext?.display() ?? true;
-  });
-  const style = createMemo(() => {
-    if (display()) {
-      return local.style;
-    }
-
-    return mergeStyle(local.style, {
-      opacity: 0,
-      height: 0,
-      overflow: "hidden",
-      "pointer-events": "none",
-      position: "absolute",
-    });
+    return access(local.order) ?? itemContext?.order() ?? 0;
   });
 
   return (
-    <InternalItem
-      as={local.as}
-      ref={local.ref}
-      itemKey={local.itemKey}
-      order={order}
-      role={local.role ?? itemContext?.role}
-      style={style()}
-      aria-hidden={display() ? undefined : true}
-      {...rest}
-    />
+    <OverflowItemContext.Provider value={null}>
+      <InternalItem
+        as={local.as}
+        ref={local.ref}
+        recordId={id}
+        itemKey={local.itemKey ?? itemContext?.itemKey}
+        order={order()}
+        role={local.role ?? itemContext?.role}
+        show={itemContext?.show()}
+        responsive={rootContext.responsive()}
+        invalidate={rootContext.invalidate()}
+        {...rest}
+      />
+    </OverflowItemContext.Provider>
   );
 }

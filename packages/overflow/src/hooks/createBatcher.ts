@@ -1,12 +1,5 @@
 import { tryOnCleanup } from "@s-components/utils";
-import {
-  Accessor,
-  batch,
-  createMemo,
-  createSignal,
-  Setter,
-  SignalOptions,
-} from "solid-js";
+import { batch, createMemo, createSignal, Setter } from "solid-js";
 
 export type BatcherSchedule = "microtask" | "defer" | "animationFrame";
 
@@ -57,11 +50,14 @@ function flushSchedule(mode: BatcherSchedule, callback: VoidFunction) {
 }
 
 export interface BatcherOptions {
+  /**
+   * @default 'microtask'
+   */
   schedule?: BatcherSchedule;
 }
 
 export function createBatcher(options: BatcherOptions = {}) {
-  const { schedule = "animationFrame" } = options;
+  const { schedule = "microtask" } = options;
   let queue: VoidFunction[] = [];
   let disposed = false;
 
@@ -123,36 +119,4 @@ export function createBatcher(options: BatcherOptions = {}) {
   };
 }
 
-type Batcher = ReturnType<typeof createBatcher>;
-
-export interface BatchedSetterOptions {
-  equals?: boolean;
-}
-
-export function createBatchedSetter<T>(
-  setter: Setter<T>,
-  batcher: Batcher,
-  options: BatchedSetterOptions = {},
-) {
-  const { equals = true } = options;
-  let pending = false;
-  let value: T;
-  let hasValue = false;
-
-  return (next: T) => {
-    if (equals && hasValue && Object.is(value, next)) {
-      return;
-    }
-
-    value = next;
-    hasValue = true;
-
-    if (pending) return;
-    pending = true;
-
-    batcher.enqueue(() => {
-      pending = false;
-      setter(() => value);
-    });
-  };
-}
+export type Batcher = ReturnType<typeof createBatcher>;
