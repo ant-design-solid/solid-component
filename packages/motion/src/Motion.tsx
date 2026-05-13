@@ -22,18 +22,15 @@ import {
 } from "./types";
 import { forceReflow, getMotionClassNames, removeMotionClasses } from "./util";
 
-export interface FloatingTriggerOptions {}
-
-export interface MotionCommonProps<T extends HTMLElement = HTMLElement> extends MotionBaseProps {
+export interface MotionOwnProps<T extends HTMLElement = HTMLElement>
+  extends MotionBaseProps {
   ref: T | ((el: T) => void);
   class: string | undefined;
   style: JSX.CSSProperties | string | undefined;
 }
 
-export interface MotionRenderProps extends MotionCommonProps {}
-
 export type MotionProps<T extends ValidComponent | HTMLElement = HTMLElement> =
-  FloatingTriggerOptions & Partial<MotionCommonProps<ElementOf<T>>>;
+  Partial<MotionOwnProps<ElementOf<T>>>;
 
 interface MotionHandlers {
   prepare?: (el: HTMLElement) => void | Promise<void>;
@@ -314,7 +311,7 @@ export default function Motion<T extends ValidComponent>(
 
   return (
     <Show when={shouldRender()}>
-      <Polymorphic<MotionRenderProps>
+      <Polymorphic<MotionOwnProps<ElementOf<T>>>
         as={local.as}
         ref={mergeRefs(local.ref, setElRef)}
         {...attrs()}

@@ -11,8 +11,8 @@ import {
 import { type FloatingMaskProps, default as Mask } from './FloatingMask'
 import { type FloatingPopupProps, default as Popup } from './FloatingPopup'
 import { type FloatingPortalProps, default as Portal } from './FloatingPortal'
-import { type FloatingRootProps, default as Root } from './FloatingRoot'
-import { type FloatingTriggerProps, default as Trigger } from './FloatingTrigger'
+import { type FloatingRootOwnProps, type FloatingRootProps, default as Root } from './FloatingRoot'
+import { type FloatingTriggerOwnProps, type FloatingTriggerProps, default as Trigger } from './FloatingTrigger'
 
 export {
   Arrow as FloatingArrow,
@@ -27,7 +27,9 @@ export {
   type FloatingMaskProps,
   type FloatingPopupProps,
   type FloatingPortalProps,
+  type FloatingRootOwnProps,
   type FloatingRootProps,
+  type FloatingTriggerOwnProps,
   type FloatingTriggerProps
 }
 export type { FloatingAlign, FloatingContextValue, FloatingMotionConfig, FloatingPlacements, FloatingPositionState }

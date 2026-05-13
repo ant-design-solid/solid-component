@@ -9,7 +9,7 @@ import createHasAction, { ActionType } from './hooks/createHasAction'
 import createPosition from './hooks/createPosition'
 import useDelay from './hooks/useDelay'
 
-export interface FloatingRootProps extends Partial<FloatingRootOptions> {
+export interface FloatingRootOwnProps extends Partial<FloatingRootOptions> {
   open?: boolean
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
@@ -20,6 +20,8 @@ export interface FloatingRootProps extends Partial<FloatingRootOptions> {
   showAction?: ActionType[]
   hideAction?: ActionType[]
 }
+
+export type FloatingRootProps = FloatingRootOwnProps
 
 const defaults = {
   defaultOpen: false,

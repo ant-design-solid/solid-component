@@ -5,8 +5,6 @@ import { callHandler, mergeRefs } from '@s-components/utils'
 import { useFloatingContext } from './FloatingContext'
 import { ValueOf } from '@s-primitives/shared'
 
-export interface FloatingTriggerOptions {}
-
 const HANDLERS = [
   'onClick',
   'onTouchStart',
@@ -18,20 +16,20 @@ const HANDLERS = [
   'onContextMenu',
 ] as const
 
-export interface FloatingTriggerCommonProps<T extends HTMLElement = HTMLElement> extends Pick<
+export interface FloatingTriggerOwnProps<T extends HTMLElement = HTMLElement> extends Pick<
   JSX.HTMLAttributes<T>,
   ValueOf<typeof HANDLERS>
 > {
   ref: T | ((el: T) => void)
 }
 
-export interface FloatingTriggerRenderProps extends FloatingTriggerCommonProps {
+type FloatingTriggerElementProps<T extends HTMLElement = HTMLElement> = FloatingTriggerOwnProps<T> & {
   'aria-expanded': boolean
   'aria-controls': string | undefined
 }
 
-export type FloatingTriggerProps<T extends ValidComponent | HTMLElement = HTMLElement> = FloatingTriggerOptions &
-  Partial<FloatingTriggerCommonProps<ElementOf<T>>>
+export type FloatingTriggerProps<T extends ValidComponent | HTMLElement = HTMLElement> =
+  Partial<FloatingTriggerOwnProps<ElementOf<T>>>
 
 export default function FloatingTrigger<T extends ValidComponent>(props: PolymorphicProps<T, FloatingTriggerProps<T>>) {
   const merged = mergeProps({ as: 'button' } as const, props as FloatingTriggerProps)
@@ -48,7 +46,7 @@ export default function FloatingTrigger<T extends ValidComponent>(props: Polymor
     'onContextMenu',
   ])
   const context = useFloatingContext()
-  const onPointerEnter: FloatingTriggerCommonProps['onPointerEnter'] = e => {
+  const onPointerEnter: FloatingTriggerOwnProps['onPointerEnter'] = e => {
     if (e.pointerType === 'mouse' && context.hasAction('show', 'hover')) {
       context.setPointerPoint(e.clientX, e.clientY)
       context.setOpen(true)
@@ -56,14 +54,14 @@ export default function FloatingTrigger<T extends ValidComponent>(props: Polymor
     callHandler(e, local.onPointerEnter)
   }
 
-  const onPointerLeave: FloatingTriggerCommonProps['onPointerLeave'] = e => {
+  const onPointerLeave: FloatingTriggerOwnProps['onPointerLeave'] = e => {
     if (e.pointerType === 'mouse' && context.hasAction('hide', 'hover')) {
       context.setOpen(false)
     }
     callHandler(e, local.onPointerLeave)
   }
 
-  const onClick: FloatingTriggerCommonProps['onClick'] = e => {
+  const onClick: FloatingTriggerOwnProps['onClick'] = e => {
     const clickToShow = context.hasAction('show', 'click')
     const clickToHide = context.hasAction('hide', 'click')
     if (clickToShow || clickToHide) {
@@ -78,7 +76,7 @@ export default function FloatingTrigger<T extends ValidComponent>(props: Polymor
     callHandler(e, local.onClick)
   }
 
-  const onTouchStart: FloatingTriggerCommonProps['onTouchStart'] = e => {
+  const onTouchStart: FloatingTriggerOwnProps['onTouchStart'] = e => {
     const touchToShow = context.hasAction('show', 'touch')
     const touchToHide = context.hasAction('hide', 'touch')
     if (touchToShow || touchToHide) {
@@ -91,27 +89,27 @@ export default function FloatingTrigger<T extends ValidComponent>(props: Polymor
     callHandler(e, local.onTouchStart)
   }
 
-  const onPointerDown: FloatingTriggerCommonProps['onPointerDown'] = e => {
+  const onPointerDown: FloatingTriggerOwnProps['onPointerDown'] = e => {
     if (!context.open()) {
       void context.reposition()
     }
     callHandler(e, local.onPointerDown)
   }
 
-  const onFocus: FloatingTriggerCommonProps['onFocus'] = e => {
+  const onFocus: FloatingTriggerOwnProps['onFocus'] = e => {
     if (context.hasAction('show', 'focus')) {
       context.setOpen(true)
     }
     callHandler(e, local.onFocus)
   }
-  const onBlur: FloatingTriggerCommonProps['onBlur'] = e => {
+  const onBlur: FloatingTriggerOwnProps['onBlur'] = e => {
     if (context.hasAction('hide', 'focus')) {
       context.setOpen(false)
     }
     callHandler(e, local.onBlur)
   }
 
-  const onContextMenu: FloatingTriggerCommonProps['onContextMenu'] = e => {
+  const onContextMenu: FloatingTriggerOwnProps['onContextMenu'] = e => {
     if (context.hasAction('show', 'contextmenu')) {
       if (context.open() && context.hasAction('hide', 'contextmenu')) {
         context.setOpen(false)
@@ -126,7 +124,7 @@ export default function FloatingTrigger<T extends ValidComponent>(props: Polymor
   }
 
   return (
-    <Polymorphic<FloatingTriggerRenderProps>
+    <Polymorphic<FloatingTriggerElementProps<ElementOf<T>>>
       as={local.as}
       ref={mergeRefs(local.ref, context.setTriggerRef)}
       onClick={onClick}
