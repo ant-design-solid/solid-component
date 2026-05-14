@@ -26,4 +26,5 @@ catalogs:
     "@solidjs/router": ^0.15.0
     "@solidjs/start": 2.0.0-alpha.2
     "@mdx-js/rollup": ^3.0.0
-    "solid-mdx": ^0.0.7
+    rehype-pretty-code: ^0.14.3
+    shiki: ^4.0.2

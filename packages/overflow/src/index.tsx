@@ -80,12 +80,12 @@ export {
   OverflowSuffix,
 };
 
-export * from "./OverflowItem";
-export * from "./OverflowItems";
-export * from "./OverflowPrefix";
-export * from "./OverflowRest";
-export * from "./OverflowRoot";
-export * from "./OverflowSuffix";
+export type { OverflowItemOwnProps, OverflowItemProps } from "./OverflowItem";
+export type { OverflowItemsOwnProps, OverflowItemsProps } from "./OverflowItems";
+export type { OverflowPrefixOwnProps, OverflowPrefixProps } from "./OverflowPrefix";
+export type { OverflowRestOwnProps, OverflowRestProps } from "./OverflowRest";
+export type { OverflowRootOwnProps, OverflowRootProps } from "./OverflowRoot";
+export type { OverflowSuffixOwnProps, OverflowSuffixProps } from "./OverflowSuffix";
 
 export type {
   OverflowItemContextValue,

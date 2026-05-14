@@ -1,8 +1,61 @@
-# Overflow
----
+export const meta = {
+  title: "Overflow",
+  description:
+    "Responsive overflow composition for chips, tabs, breadcrumbs and constrained horizontal layouts.",
+  summary: "Adaptive item overflow with prefix, rest and suffix composition.",
+  order: 30,
+  keywords: ["responsive", "overflow", "chips", "tabs"],
+};
 
 import Basic from "./basic.tsx";
+import BasicSource from "./basic.tsx?code";
 
 Responsive composition with `Root`, `Prefix`, `Items`, `Item`, `Rest`, and `Suffix`.
 
-<Basic />
+## When to use
+
+- You need to render a horizontal list that should gracefully collapse when width becomes constrained.
+- You want to preserve leading and trailing affordances while only collapsing the middle items.
+- You need more control than a one-off `overflow: hidden` treatment can provide.
+
+## Example
+
+<DemoCard
+  title="Responsive collapse"
+  description="Resize the container width and the middle items collapse into the rest slot while prefix and suffix stay visible."
+  source={BasicSource}
+  codeLanguage="tsx"
+>
+  <Basic />
+</DemoCard>
+
+## Composition model
+
+### `Overflow.Root`
+
+Provides the container and measurement context for the rest of the composition. This is where
+`maxCount` and collapse behavior are configured.
+
+### `Overflow.Items`
+
+Owns the list iteration and lets `Overflow` keep track of the rendered items by `itemKey`.
+
+### `Overflow.Rest`
+
+Renders the collapsed remainder. Use it when you want a `+3`-style indicator or a custom overflow
+summary.
+
+## API overview
+
+<PackageApiTable packageName="overflow" />
+
+## Notes
+
+- The package is designed for composition, not for shipping a styled overflow widget.
+- Width measurement is only useful when the item subtree has stable layout semantics.
+- If your list items can resize after mount, make sure the surrounding layout actually reflows.
+
+<Callout tone="tip" title="Good fit">
+  This primitive works well for selected-item chips, breadcrumb trails and segmented controls where
+  preserving the leading or trailing affordances matters more than keeping every item visible.
+</Callout>

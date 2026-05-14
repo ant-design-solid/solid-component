@@ -1,0 +1,69 @@
+export const meta = {
+  title: "Floating",
+  description:
+    "Composable popup, trigger and portal primitives for tooltips, popovers and dropdowns.",
+  summary: "Popup primitives with trigger, portal, arrow and motion hooks.",
+  order: 10,
+  keywords: ["popup", "tooltip", "popover", "dropdown", "portal"],
+};
+
+import Basic from "./basic.tsx";
+import BasicSource from "./basic.tsx?raw";
+
+Floating provides the structural pieces required to build layered UI such as tooltips, dropdowns
+and popovers without baking in visual design.
+
+## When to use
+
+- You need positioning logic and trigger behavior, but you want to own the rendered markup.
+- You want one primitive set that can drive hover, click, focus or contextmenu interactions.
+- You need portals and arrow placement without reaching for a larger overlay framework.
+
+## Example
+
+<DemoCard
+  title="Interactive demo"
+  description="This example uses click-triggered state, a portal-backed popup and a simple arrow."
+  source={BasicSource}
+  codeLanguage="tsx"
+>
+  <Basic />
+</DemoCard>
+
+## Composition model
+
+### `Floating.Root`
+
+Owns open state, trigger and popup references, placement configuration and delayed open/close
+behavior.
+
+### `Floating.Trigger`
+
+Connects user actions such as click, hover, focus or context menu to the state exposed by
+`Floating.Root`.
+
+### `Floating.Popup`
+
+Wraps the visible layer and coordinates position updates, outside-click handling and optional
+motion.
+
+### `Floating.Portal` and `Floating.Arrow`
+
+Use `Portal` when the popup should escape local stacking contexts, and `Arrow` when the layer
+needs a pointer that follows the resolved alignment.
+
+## API overview
+
+<PackageApiTable packageName="floating" />
+
+## Notes
+
+- The package handles interaction and placement primitives, not visual tokens.
+- If you need a controlled popup, pass `open` and `onOpenChange` to `Floating.Root`.
+- `action`, `showAction` and `hideAction` let you mix multiple interaction modes without forking
+  the primitive.
+
+<Callout tone="tip" title="Composition-first">
+  Keep your popup markup inside `Floating.Popup` close to the design system that styles it. This
+  package is most useful when it stays below your visual components, not when it becomes one.
+</Callout>

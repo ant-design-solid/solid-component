@@ -1,0 +1,60 @@
+export const meta = {
+  title: "Motion",
+  description:
+    "Transition primitives that coordinate appear, enter and leave lifecycles in Solid.",
+  summary: "Lifecycle-driven motion primitives for enter and leave transitions.",
+  order: 20,
+  keywords: ["animation", "transition", "motion"],
+};
+
+import Basic from "./basic.tsx";
+import BasicSource from "./basic.tsx?code";
+
+Motion is a transition primitive that coordinates appear, enter and leave phases while leaving the
+final DOM element and CSS naming strategy in your hands.
+
+## When to use
+
+- You want lifecycle-aware transitions without committing to a prebuilt animation system.
+- You need full control over the rendered element and the generated class names.
+- You want a primitive that can be reused by popup layers, drawers or inline stateful content.
+
+## Example
+
+<DemoCard
+  title="Enter / leave preview"
+  description="The demo uses a simple CSS name to show how `Motion` coordinates visibility state with transition classes."
+  source={BasicSource}
+  codeLanguage="tsx"
+>
+  <Basic />
+</DemoCard>
+
+## Motion phases
+
+### Appear and enter
+
+When a node becomes visible, `Motion` progresses through prepare, start, active and end stages.
+That gives you enough hooks to attach class names, force reflow and wait for motion completion.
+
+### Leave
+
+Leave follows the same staged lifecycle, then optionally removes the node when the transition
+finishes.
+
+## API overview
+
+<PackageApiTable packageName="motion" />
+
+## Notes
+
+- `name` can be a string or a more explicit object when you need complete control over the class
+  names for each phase and step.
+- `removeOnLeave` determines whether the element is removed after the leave sequence completes.
+- `MotionGroup` is exported but not implemented yet, so current docs focus on the core `Motion`
+  primitive.
+
+<Callout tone="warn" title="Current limitation">
+  `MotionGroup` is exported but still throws at runtime. Treat it as unavailable until the package
+  implements list orchestration for grouped transitions.
+</Callout>

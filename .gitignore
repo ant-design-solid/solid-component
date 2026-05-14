@@ -4,7 +4,6 @@ dist
 .vercel
 .netlify
 .vinxi
-app.config.timestamp_*.js
 
 # Environment
 .env
@@ -24,3 +23,4 @@ node_modules
 .nitro
 *.log
 .turbo
+.tmp-*

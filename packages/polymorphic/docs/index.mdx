@@ -1,50 +1,40 @@
+export const meta = {
+  title: "Polymorphic",
+  description:
+    "A tiny polymorphic renderer that lets consumers decide the final element through `as`.",
+  summary: "Low-level polymorphic rendering for reusable component APIs.",
+  order: 40,
+  keywords: ["as", "component", "primitive", "types"],
+};
+
 import Basic from "./basic.tsx";
+import BasicSource from "./basic.tsx?code";
 
-# Polymorphic
+`Polymorphic` is a very small utility component that delegates the final rendered element to the
+caller through `as`.
 
+## When to use
 
-`Polymorphic` 是一个非常轻量的工具组件，用来把“渲染成什么元素”这件事交给调用方决定。
+- You want a shared component API without hard-coding the final tag.
+- You need to render as `button`, `a`, `div`, or a custom component based on context.
+- You want the target element's attributes to stay visible at the type level.
 
-它本身几乎不带业务逻辑，只做一件事：读取 `as` 属性，然后把剩余属性透传给对应的原生标签或自定义组件。这种模式适合做基础组件封装，因为你可以复用同一套交互或样式能力，同时保留渲染层的灵活性。
+## Example
 
-## 适用场景
+<DemoCard
+  title="Switch the rendered element"
+  description="The same component API renders as a button or as a custom link component depending on the `as` target."
+  source={BasicSource}
+  codeLanguage="tsx"
+>
+  <Basic />
+</DemoCard>
 
-- 你在封装通用组件，但不希望把底层标签写死。
-- 你希望同一组件在不同上下文中渲染为 `button`、`a`、`div` 或自定义组件。
-- 你需要在类型层面继承目标元素的属性，例如渲染为 `a` 时支持 `href`，渲染为 `button` 时支持 `type`。
+## Rendering custom components
 
-## 在线示例
-
-<Basic />
-
-## 基本用法
-
-```tsx
-import { Polymorphic } from "@s-components/polymorphic";
-
-export default function Example() {
-  return (
-    <>
-      <Polymorphic as="button" type="button">
-        保存
-      </Polymorphic>
-
-      <Polymorphic as="a" href="/docs">
-        查看文档
-      </Polymorphic>
-    </>
-  );
-}
-```
-
-核心点只有两个：
-
-1. `as` 决定最终渲染的目标。
-2. 其余属性会原样透传给目标元素或目标组件。
-
-## 渲染自定义组件
-
-`as` 不仅可以传原生标签，也可以传自定义组件。这样你可以在保留统一调用方式的同时，接入自己的路由组件、样式组件或业务组件。
+`as` can point to a custom component, not just a native tag. That makes the primitive useful for
+wrapping router links, styled wrappers or app-level abstractions without losing a unified calling
+shape.
 
 ```tsx
 import { Polymorphic } from "@s-components/polymorphic";
@@ -56,58 +46,33 @@ function AppLink(props) {
 export default function Example() {
   return (
     <Polymorphic as={AppLink} href="/motion">
-      打开 Motion 文档
+      Open motion docs
     </Polymorphic>
   );
 }
 ```
 
-## 类型说明
+## Exported types
 
-当前包主要暴露了以下几个类型与工具：
+- `Polymorphic` performs the actual runtime rendering.
+- `PolymorphicAttributes<T>` defines the `as` attribute.
+- `PolymorphicProps<T, Props>` merges target-element props with your own component props.
+- `ElementOf<T>` resolves the DOM element type behind a target component.
 
-- `Polymorphic`：真正执行动态渲染的组件。
-- `PolymorphicAttributes<T>`：定义了 `as` 属性。
-- `PolymorphicProps<T, Props>`：把目标元素属性、自定义属性和 `as` 合并到一起。
-- `ElementOf<T>`：根据目标元素类型推导对应的 DOM 元素类型。
+## API overview
 
-如果你在封装自己的组件，通常会直接使用 `PolymorphicProps`：
+<PackageApiTable packageName="polymorphic" />
 
-```tsx
-import type { ValidComponent } from "solid-js";
-import { Polymorphic, type PolymorphicProps } from "@s-components/polymorphic";
+## Notes
 
-type ActionProps<T extends ValidComponent> = PolymorphicProps<
-  T,
-  {
-    loading?: boolean;
-  }
->;
+- `as` is optional in the type layer but required by runtime behavior unless the caller sets a default.
+- Prop passthrough does not add semantic fixes. Rendering as `a` does not magically make `disabled`
+  meaningful.
+- The package is intentionally small. Styling, accessibility adjustments and interaction policies
+  belong in the higher-level component you build on top of it.
 
-function Action<T extends ValidComponent>(props: ActionProps<T>) {
-  return (
-    <Polymorphic as={props.as ?? "button"} disabled={props.loading}>
-      {props.loading ? "提交中..." : props.children}
-    </Polymorphic>
-  );
-}
-```
-
-这种写法的价值在于：你的组件可以继续暴露统一 API，但调用方仍然能拿到目标元素本身的属性能力。
-
-## 注意事项
-
-- `as` 虽然在类型上是可选的，但运行时必须传入；未传时会直接抛错。
-- 透传属性时不会自动做语义修正，例如把组件渲染成 `a` 后，`disabled` 并不会天然生效，这类语义差异需要业务侧自己处理。
-- 当 `as` 指向自定义组件时，是否继续向下透传属性，取决于该自定义组件自己的实现。
-- `Polymorphic` 只负责渲染切换，不负责样式合并、事件编排或可访问性兜底，这些能力应由上层组件自行承担。
-
-## 实现机制
-
-内部实现非常直接：
-
-- 先通过 `splitProps` 取出 `as`。
-- 再使用 Solid 的 `Dynamic` 根据 `as` 渲染目标。
-- 除 `as` 之外的所有属性都透传给最终目标。
-
-这意味着它的学习成本低、行为可预测，也适合作为其他基础组件的底层能力。
+<Callout tone="note" title="Keep it low-level">
+  If you find yourself adding behavior, variants and accessibility fixes directly into
+  `Polymorphic`, you are likely moving responsibility into the wrong layer. Keep this primitive
+  narrow and compose richer components on top.
+</Callout>

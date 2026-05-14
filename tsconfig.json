@@ -18,7 +18,11 @@
       "solid-js"
     ],
     "isolatedModules": true,
-    "paths": {},
+    "paths": {
+      "@mdx-runtime": [
+        "./src/lib/mdx.tsx"
+      ]
+    },
   },
   "include": [
     "*.ts",
