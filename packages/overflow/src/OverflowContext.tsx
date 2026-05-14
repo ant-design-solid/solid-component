@@ -1,6 +1,6 @@
 import { MaybeElement } from "@s-primitives/shared";
+import { type Batcher } from "@s-components/utils";
 import { createContext, useContext, type Accessor } from "solid-js";
-import { Batcher } from "./hooks/createBatcher";
 
 export type OverflowItemId = symbol;
 export type OverflowItemKey = string | number;

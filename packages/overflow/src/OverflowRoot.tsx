@@ -2,7 +2,7 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@s-components/polymorphic";
-import { mergeRefs } from "@s-components/utils";
+import { createBatcher, mergeRefs } from "@s-components/utils";
 import {
   createResizeObserver,
   createShallowCollection,
@@ -29,7 +29,6 @@ import {
 import { PREFIX_ID } from "./OverflowPrefix";
 import { REST_ID } from "./OverflowRest";
 import { SUFFIX_ID } from "./OverflowSuffix";
-import { createBatcher } from "./hooks/createBatcher";
 
 const RESPONSIVE = "responsive" as const;
 const INVALIDATE = "invalidate" as const;
@@ -105,7 +104,7 @@ export default function OverflowRoot<T extends ValidComponent>(
 
   createResizeObserver(rootRef, ([entry]) => {
     const { clientWidth } = entry.target;
-    batcher.enqueue(() => {
+    void batcher.submit(() => {
       setContainerWidth(clientWidth);
     });
   });

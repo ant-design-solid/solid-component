@@ -130,7 +130,7 @@ export function InternalItem<T extends ValidComponent>(
   const targetRef = createMemo(() => (local.responsive ? itemRef() : null));
   createResizeObserver(targetRef, ([entry]) => {
     const nextWidth = (entry.target as HTMLElement).offsetWidth;
-    rootContext.batcher.enqueue(() => {
+    void rootContext.batcher.submit(() => {
       setWidth(nextWidth);
     });
   });
