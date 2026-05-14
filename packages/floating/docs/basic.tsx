@@ -1,6 +1,17 @@
 import Floating from "../src";
+import "./style.css";
 
 export default function BasicDemo() {
+  const placements = {
+    top: {
+      points: ["bc", "tc"],
+      overflow: {
+        shiftX: 50,
+        adjustY: true,
+      },
+      offset: [0, -10],
+    },
+  };
   return (
     <div
       style={{
@@ -12,7 +23,7 @@ export default function BasicDemo() {
         background: "#f8fbf7",
       }}
     >
-      <Floating.Root action="click" placement="bottom">
+      <Floating.Root action="click" placement="top" placements={placements as any}>
         <Floating.Trigger
           as="button"
           type="button"
@@ -39,6 +50,7 @@ export default function BasicDemo() {
               background: "#ffffff",
               "box-shadow": "0 16px 36px rgba(21, 41, 26, 0.14)",
             }}
+            class="sc-floating-popup"
           >
             <strong style={{ display: "block", "margin-bottom": "6px" }}>Composable popup</strong>
             <span style={{ color: "#5f6d60", "line-height": 1.6 }}>

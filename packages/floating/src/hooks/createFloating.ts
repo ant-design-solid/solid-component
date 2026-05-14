@@ -1,5 +1,5 @@
 import { type Accessor, createEffect, createMemo, createSignal, untrack } from "solid-js";
-import { isDOM, isVisible } from "@s-components/utils";
+import { createBatcher, isDOM, isVisible } from "@s-components/utils";
 import type {
   FloatingAlign,
   FloatingContextValue,
@@ -88,14 +88,15 @@ function shouldSwitchPlacement(
   );
 }
 
-// =========================== createPosition ============================
-export default function createPosition(
+// =========================== createFloating ============================
+export default function createFloating(
   open: Accessor<boolean>,
   popup: Accessor<HTMLElement | undefined>,
   target: Accessor<HTMLElement | [x: number, y: number] | undefined>,
   placement: Accessor<string>,
   placements: Accessor<FloatingPlacements>,
   popupAlign?: Accessor<FloatingAlign | undefined>,
+  onFloating?: (el: any, align: any) => void,
 ) {
   const [position, setPosition] = createSignal<FloatingPositionState>({
     ready: false,
@@ -110,11 +111,14 @@ export default function createPosition(
     align: placements()[placement()] || {},
   });
 
-  let repositionCount = 0;
   const scrollerList = createMemo<HTMLElement[]>(() => {
     const popupEl = popup();
     if (!popupEl) return [];
     return collectScroller(popupEl);
+  });
+  const repositionBatcher = createBatcher<"superseded">({
+    strategy: "latest",
+    discardValue: "superseded",
   });
 
   let prevFlipRef: { tb?: boolean; bt?: boolean; lr?: boolean; rl?: boolean } = {};
@@ -152,6 +156,22 @@ export default function createPosition(
       ...popupAlign?.(),
     };
 
+    const placeholderElement = doc.createElement("div");
+    popupElement.parentNode?.appendChild(placeholderElement);
+    placeholderElement.style.position = popupPosition;
+    placeholderElement.style.left = `${popupElement.offsetLeft}px`;
+    placeholderElement.style.top = `${popupElement.offsetTop}px`;
+    placeholderElement.style.width = `${popupElement.offsetWidth}px`;
+    placeholderElement.style.height = `${popupElement.offsetHeight}px`;
+
+    // Reset
+
+    popupElement.style.left = "0";
+    popupElement.style.top = "0";
+    popupElement.style.right = "auto";
+    popupElement.style.bottom = "auto";
+    popupElement.style.overflow = "hidden";
+
     let targetRect: Rect;
     if (Array.isArray(targetValue)) {
       targetRect = { x: targetValue[0], y: targetValue[1], width: 0, height: 0 };
@@ -166,47 +186,9 @@ export default function createPosition(
       targetRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     }
 
-    const placeholderElement = doc.createElement("div");
-    placeholderElement.style.position = popupPosition;
-    placeholderElement.style.left = `${popupElement.offsetLeft}px`;
-    placeholderElement.style.top = `${popupElement.offsetTop}px`;
-    placeholderElement.style.width = `${popupElement.offsetWidth}px`;
-    placeholderElement.style.height = `${popupElement.offsetHeight}px`;
-    popupElement.parentNode?.appendChild(placeholderElement);
-
-    let rawPopupRect: DOMRect;
-    let rawPopupMirrorRect: DOMRect;
-    let clientWidth: number;
-    let clientHeight: number;
-    let scrollWidth: number;
-    let scrollHeight: number;
-    let scrollTop: number;
-    let scrollLeft: number;
-    try {
-      popupElement.style.left = "0";
-      popupElement.style.top = "0";
-      popupElement.style.right = "auto";
-      popupElement.style.bottom = "auto";
-      popupElement.style.overflow = "hidden";
-
-      rawPopupRect = popupElement.getBoundingClientRect();
-      ({ clientWidth, clientHeight, scrollWidth, scrollHeight, scrollTop, scrollLeft } =
-        doc.documentElement);
-
-      popupElement.style.left = "auto";
-      popupElement.style.top = "auto";
-      popupElement.style.right = "0";
-      popupElement.style.bottom = "0";
-
-      rawPopupMirrorRect = popupElement.getBoundingClientRect();
-    } finally {
-      popupElement.style.left = originLeft;
-      popupElement.style.top = originTop;
-      popupElement.style.right = originRight;
-      popupElement.style.bottom = originBottom;
-      popupElement.style.overflow = originOverflow;
-      popupElement.parentElement?.removeChild(placeholderElement);
-    }
+    const rawPopupRect = popupElement.getBoundingClientRect();
+    const { clientWidth, clientHeight, scrollWidth, scrollHeight, scrollTop, scrollLeft } =
+      doc.documentElement;
 
     const targetWidth = targetRect.width;
     const targetHeight = targetRect.height;
@@ -233,7 +215,25 @@ export default function createPosition(
     );
 
     const visibleArea = htmlRegion === VISIBLE ? visibleRegionArea : scrollRegionArea;
+
     const adjustCheckVisibleArea = isVisibleFirst ? visibleRegionArea : visibleArea;
+
+    // Record right & bottom align data
+    popupElement.style.left = "auto";
+    popupElement.style.top = "auto";
+    popupElement.style.right = "0";
+    popupElement.style.bottom = "0";
+
+    const rawPopupMirrorRect = popupElement.getBoundingClientRect();
+
+    // Reset back
+    popupElement.style.left = originLeft;
+    popupElement.style.top = originTop;
+    popupElement.style.right = originRight;
+    popupElement.style.bottom = originBottom;
+    popupElement.style.overflow = originOverflow;
+
+    popupElement.parentElement?.removeChild(placeholderElement);
 
     const popupRect = rawPopupRect;
     popupRect.x = popupRect.x ?? popupRect.left;
@@ -260,31 +260,23 @@ export default function createPosition(
       return false;
     }
 
-    const placementOffset = placementInfo.offset;
-    const placementTargetOffset = placementInfo.targetOffset;
-    let [popupOffsetX, popupOffsetY] = getNumberOffset(
-      popupRect,
-      placementOffset as [OffsetType, OffsetType] | undefined,
-    );
-    const [targetOffsetX, targetOffsetY] = getNumberOffset(
-      targetRect,
-      placementTargetOffset as [OffsetType, OffsetType] | undefined,
-    );
+    const { offset: placementOffset, targetOffset: placementTargetOffset } = placementInfo;
+    let [popupOffsetX, popupOffsetY] = getNumberOffset(popupRect, placementOffset);
+    const [targetOffsetX, targetOffsetY] = getNumberOffset(targetRect, placementTargetOffset);
 
     targetRect.x -= targetOffsetX;
     targetRect.y -= targetOffsetY;
 
-    const popupPoint = placementInfo.points?.[0];
-    const targetPoint = placementInfo.points?.[1];
+    const [popupPoint, targetPoint] = placementInfo.points ?? [];
     const targetPoints = splitPoints(targetPoint);
     const popupPoints = splitPoints(popupPoint);
 
     const targetAlignPoint = getAlignPoint(targetRect, targetPoints);
     const popupAlignPoint = getAlignPoint(popupRect, popupPoints);
 
-    const nextAlignInfo: FloatingAlign = { ...placementInfo };
+    const nextAlignInfo = { ...placementInfo };
 
-    let nextPoints: [Points, Points] = [popupPoints, targetPoints];
+    let nextPoints = [popupPoints, targetPoints];
 
     let nextOffsetX = targetAlignPoint.x - popupAlignPoint.x + popupOffsetX;
     let nextOffsetY = targetAlignPoint.y - popupAlignPoint.y + popupOffsetY;
@@ -292,6 +284,7 @@ export default function createPosition(
     function getIntersectionVisibleArea(offX: number, offY: number, area = visibleArea) {
       const l = popupRect.x + offX;
       const t = popupRect.y + offY;
+
       const r = l + popupWidth;
       const b = t + popupHeight;
 
@@ -310,15 +303,17 @@ export default function createPosition(
       visibleRegionArea,
     );
 
-    const targetAlignPointTL = getAlignPoint(targetRect, splitPoints("tl"));
-    const popupAlignPointTL = getAlignPoint(popupRect, splitPoints("tl"));
-    const targetAlignPointBR = getAlignPoint(targetRect, splitPoints("br"));
-    const popupAlignPointBR = getAlignPoint(popupRect, splitPoints("br"));
+    const tl: Points = ["t", "l"] as const;
+    const br: Points = ["b", "r"] as const;
+    const targetAlignPointTL = getAlignPoint(targetRect, tl);
+    const popupAlignPointTL = getAlignPoint(popupRect, tl);
+    const targetAlignPointBR = getAlignPoint(targetRect, br);
+    const popupAlignPointBR = getAlignPoint(popupRect, br);
 
     const overflowConfig = placementInfo.overflow || {};
     const { adjustX, adjustY, shiftX, shiftY } = overflowConfig as any;
 
-    const supportAdjust = (val: boolean | number | undefined) => {
+    const supportAdjust = (val: boolean | number) => {
       if (typeof val === "boolean") return val;
       return (val as number) >= 0;
     };
@@ -339,11 +334,8 @@ export default function createPosition(
     const needAdjustY = supportAdjust(adjustY);
     const sameTB = popupPoints[0] === targetPoints[0];
 
-    if (
-      needAdjustY &&
-      popupPoints[0] === "t" &&
-      (nextPopupBottom > adjustCheckVisibleArea.bottom || prevFlipRef.bt)
-    ) {
+    const overflowBottom = nextPopupBottom > adjustCheckVisibleArea.bottom;
+    if (needAdjustY && popupPoints[0] === "t" && (overflowBottom || prevFlipRef.bt)) {
       let tmpNextOffsetY = nextOffsetY;
 
       if (sameTB) {
@@ -360,7 +352,7 @@ export default function createPosition(
       );
 
       const shouldFlip = shouldSwitchPlacement(
-        nextPopupBottom > adjustCheckVisibleArea.bottom,
+        overflowBottom,
         isVisibleFirst,
         newVisibleArea,
         originIntersectionVisibleArea,
@@ -378,11 +370,8 @@ export default function createPosition(
       }
     }
 
-    if (
-      needAdjustY &&
-      popupPoints[0] === "b" &&
-      (nextPopupY < adjustCheckVisibleArea.top || prevFlipRef.tb)
-    ) {
+    const overflowTop = nextPopupY < adjustCheckVisibleArea.top;
+    if (needAdjustY && popupPoints[0] === "b" && (overflowTop || prevFlipRef.tb)) {
       let tmpNextOffsetY = nextOffsetY;
 
       if (sameTB) {
@@ -399,7 +388,7 @@ export default function createPosition(
       );
 
       const shouldFlip = shouldSwitchPlacement(
-        nextPopupY < adjustCheckVisibleArea.top,
+        overflowTop,
         isVisibleFirst,
         newVisibleArea,
         originIntersectionVisibleArea,
@@ -420,13 +409,11 @@ export default function createPosition(
     syncNextPopupPosition();
 
     const needAdjustX = supportAdjust(adjustX);
+
     const sameLR = popupPoints[1] === targetPoints[1];
 
-    if (
-      needAdjustX &&
-      popupPoints[1] === "l" &&
-      (nextPopupRight > adjustCheckVisibleArea.right || prevFlipRef.rl)
-    ) {
+    const overflowRight = nextPopupRight > adjustCheckVisibleArea.right;
+    if (needAdjustX && popupPoints[1] === "l" && (overflowRight || prevFlipRef.rl)) {
       let tmpNextOffsetX = nextOffsetX;
 
       if (sameLR) {
@@ -443,7 +430,7 @@ export default function createPosition(
       );
 
       const shouldFlip = shouldSwitchPlacement(
-        nextPopupRight > adjustCheckVisibleArea.right,
+        overflowRight,
         isVisibleFirst,
         newVisibleArea,
         originIntersectionVisibleArea,
@@ -461,11 +448,8 @@ export default function createPosition(
       }
     }
 
-    if (
-      needAdjustX &&
-      popupPoints[1] === "r" &&
-      (nextPopupX < adjustCheckVisibleArea.left || prevFlipRef.lr)
-    ) {
+    const overflowLeft = nextPopupX < adjustCheckVisibleArea.left;
+    if (needAdjustX && popupPoints[1] === "r" && (overflowLeft || prevFlipRef.lr)) {
       let tmpNextOffsetX = nextOffsetX;
 
       if (sameLR) {
@@ -482,7 +466,7 @@ export default function createPosition(
       );
 
       const shouldFlip = shouldSwitchPlacement(
-        nextPopupX < adjustCheckVisibleArea.left,
+        overflowLeft,
         isVisibleFirst,
         newVisibleArea,
         originIntersectionVisibleArea,
@@ -494,79 +478,109 @@ export default function createPosition(
         prevFlipRef.lr = true;
         nextOffsetX = tmpNextOffsetX;
         popupOffsetX = -popupOffsetX;
+
         nextPoints = [reversePoints(nextPoints[0], 1), reversePoints(nextPoints[1], 1)];
       } else {
         prevFlipRef.lr = false;
       }
     }
 
+    nextAlignInfo.points = [flatPoints(nextPoints[0]), flatPoints(nextPoints[1])];
+
+    // shift
+    syncNextPopupPosition();
+
     const numShiftX = shiftX === true ? 0 : (shiftX as number);
     const numShiftY = shiftY === true ? 0 : (shiftY as number);
 
     if (typeof numShiftX === "number") {
-      if (nextPopupX < visibleArea.left) {
-        nextOffsetX -= nextPopupX - visibleArea.left - numShiftX;
+      if (nextPopupX < visibleRegionArea.left) {
+        // 左侧挤压修正时需要保留 placement 原始横向偏移，避免被 shift 阈值错误覆盖。
+        nextOffsetX -= nextPopupX - visibleRegionArea.left - popupOffsetX;
+
+        if (targetRect.x + targetWidth < visibleRegionArea.left + numShiftX) {
+          nextOffsetX += targetRect.x - visibleRegionArea.left + targetWidth - numShiftX;
+        }
       }
-      if (nextPopupRight > visibleArea.right) {
-        nextOffsetX -= nextPopupRight - visibleArea.right + numShiftX;
+      // Right
+      if (nextPopupRight > visibleRegionArea.right) {
+        nextOffsetX -= nextPopupRight - visibleRegionArea.right - popupOffsetX;
+
+        if (targetRect.x > visibleRegionArea.right - numShiftX) {
+          nextOffsetX += targetRect.x - visibleRegionArea.right + numShiftX;
+        }
       }
     }
 
     if (typeof numShiftY === "number") {
-      if (nextPopupY < visibleArea.top) {
-        nextOffsetY -= nextPopupY - visibleArea.top - numShiftY;
+      if (nextPopupY < visibleRegionArea.top) {
+        nextOffsetY -= nextPopupY - visibleRegionArea.top - popupOffsetY;
+
+        // When target if far away from visible area
+        // Stop shift
+        if (targetRect.y + targetHeight < visibleRegionArea.top + numShiftY) {
+          nextOffsetY += targetRect.y - visibleRegionArea.top + targetHeight - numShiftY;
+        }
       }
-      if (nextPopupBottom > visibleArea.bottom) {
-        nextOffsetY -= nextPopupBottom - visibleArea.bottom + numShiftY;
+
+      // Bottom
+      if (nextPopupBottom > visibleRegionArea.bottom) {
+        nextOffsetY -= nextPopupBottom - visibleRegionArea.bottom - popupOffsetY;
+
+        if (targetRect.y > visibleRegionArea.bottom - numShiftY) {
+          nextOffsetY += targetRect.y - visibleRegionArea.bottom + numShiftY;
+        }
       }
     }
 
-    const [nextPopupPoint, nextTargetPoint] = nextPoints;
-    nextAlignInfo.points = [flatPoints(nextPopupPoint), flatPoints(nextTargetPoint)];
+    // Arrow
+    const popupLeft = popupRect.x + nextOffsetX;
+    const popupRight = popupLeft + popupWidth;
+    const popupTop = popupRect.y + nextOffsetY;
+    const popupBottom = popupTop + popupHeight;
 
-    const targetCenter = getAlignPoint(targetRect, splitPoints("cc"));
+    const targetLeft = targetRect.x;
+    const targetRight = targetLeft + targetWidth;
+    const targetTop = targetRect.y;
+    const targetBottom = targetTop + targetHeight;
 
-    let nextArrowX = targetCenter.x - (popupRect.x + nextOffsetX);
-    let nextArrowY = targetCenter.y - (popupRect.y + nextOffsetY);
+    /** Max left of the popup and target element */
+    const maxLeft = Math.max(popupLeft, targetLeft);
+    /** Min right of the popup and target element */
+    const minRight = Math.min(popupRight, targetRight);
 
-    if (nextPopupPoint[1] === "l") nextArrowX = 0;
-    else if (nextPopupPoint[1] === "r") nextArrowX = popupWidth;
+    /** The center X of popup & target cross area */
+    const xCenter = (maxLeft + minRight) / 2;
+    /** Arrow X of popup offset */
+    const nextArrowX = xCenter - popupLeft;
 
-    if (nextPopupPoint[0] === "t") nextArrowY = 0;
-    else if (nextPopupPoint[0] === "b") nextArrowY = popupHeight;
+    const maxTop = Math.max(popupTop, targetTop);
+    const minBottom = Math.min(popupBottom, targetBottom);
 
-    if (popupMirrorRect.left > popupRect.left) {
-      nextOffsetX += popupMirrorRect.left - popupRect.left;
-    }
-    const offsetX4Right = clientWidth - nextOffsetX - popupWidth;
+    const yCenter = (maxTop + minBottom) / 2;
+    const nextArrowY = yCenter - popupTop;
 
-    if (popupMirrorRect.top > popupRect.top) {
-      nextOffsetY += popupMirrorRect.top - popupRect.top;
-    }
-    const offsetY4Bottom = clientHeight - nextOffsetY - popupHeight;
+    onFloating?.(popupElement, nextAlignInfo);
+
+    // Additional calculate right & bottom position
+    let offsetX4Right = popupMirrorRect.right - popupRect.x - (nextOffsetX + popupRect.width);
+    let offsetY4Bottom = popupMirrorRect.bottom - popupRect.y - (nextOffsetY + popupRect.height);
 
     if (scaleX === 1) {
       nextOffsetX = Math.floor(nextOffsetX);
-    }
-    let nextOffsetXForRight = offsetX4Right;
-    if (scaleX === 1) {
-      nextOffsetXForRight = Math.floor(offsetX4Right);
+      offsetX4Right = Math.floor(offsetX4Right);
     }
 
     if (scaleY === 1) {
       nextOffsetY = Math.floor(nextOffsetY);
+      offsetY4Bottom = Math.floor(offsetY4Bottom);
     }
-    let nextOffsetYForBottom = offsetY4Bottom;
-    if (scaleY === 1) {
-      nextOffsetYForBottom = Math.floor(offsetY4Bottom);
-    }
-
     const nextPositionState: FloatingPositionState = {
       ready: true,
       offsetX: nextOffsetX / scaleX,
       offsetY: nextOffsetY / scaleY,
-      offsetR: nextOffsetXForRight / scaleX,
-      offsetB: nextOffsetYForBottom / scaleY,
+      offsetR: offsetX4Right / scaleX,
+      offsetB: offsetY4Bottom / scaleY,
       arrowX: nextArrowX / scaleX,
       arrowY: nextArrowY / scaleY,
       scaleX,
@@ -579,31 +593,27 @@ export default function createPosition(
   };
 
   const reposition: FloatingContextValue["reposition"] = (cache?: boolean) => {
-    repositionCount += 1;
-    const id = repositionCount;
-
-    return new Promise((resolve, reject) => {
-      Promise.resolve().then(() => {
-        if (repositionCount !== id) {
-          resolve("superseded");
-          return;
-        }
-
-        try {
-          resolve(updatePosition(cache) ? "updated" : "skipped");
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
+    // 定位请求高频且只关心最后一次结果，用覆盖型批处理避免重复测量。
+    return repositionBatcher.submit(() =>
+      updatePosition(cache) ? "updated" : "skipped",
+    );
   };
 
   createEffect(() => {
-    const ele = popup();
+    const popupElement = popup();
+    const isOpen = open();
+    const targetValue = target();
+    placement();
+    placements();
+    popupAlign?.();
+
+    if (!popupElement || !isOpen || !targetValue) {
+      return;
+    }
+
+    // 对齐依赖变化后自动重算，避免只重置 ready 却没有触发新的定位。
     untrack(() => {
-      if (ele && open()) {
-        void reposition();
-      }
+      void reposition();
     });
   });
 
@@ -613,7 +623,9 @@ export default function createPosition(
 
   createEffect(() => {
     placement();
-    resetReady();
+    if (!open()) {
+      resetReady();
+    }
   });
 
   createEffect(() => {

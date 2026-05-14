@@ -6,7 +6,7 @@ import {
   type FloatingRootOptions,
 } from './FloatingContext'
 import createHasAction, { ActionType } from './hooks/createHasAction'
-import createPosition from './hooks/createPosition'
+import createFloating from './hooks/createFloating'
 import useDelay from './hooks/useDelay'
 
 export interface FloatingRootOwnProps extends Partial<FloatingRootOptions> {
@@ -40,7 +40,7 @@ export default function FloatingRoot(props: FloatingRootProps) {
 
   const open = createMemo(() => merged.open ?? internalOpen())
 
-  const [position, reposition] = createPosition(
+  const [position, reposition] = createFloating(
     open,
     popupRef,
     createMemo(() => (merged.alignPoint && pointerPoint() != null ? pointerPoint() : triggerRef())),
