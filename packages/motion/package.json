@@ -1,5 +1,5 @@
 {
-  "name": "@s-components/motion",
+  "name": "@solid-component/motion",
   "version": "0.1.0-beta.1",
   "author": "",
   "description": "",
@@ -20,8 +20,8 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@s-components/utils": "workspace:^",
-    "@s-components/polymorphic": "workspace:^"
+    "@solid-component/utils": "workspace:^",
+    "@solid-component/polymorphic": "workspace:^"
   },
   "peerDependencies": {
     "solid-js": "^1.6.5"

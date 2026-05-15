@@ -1,5 +1,7 @@
-import { MaybeElement } from "@s-primitives/shared";
-import { type Batcher } from "@s-components/utils";
+import {
+  MaybeElement,
+  type Batcher
+} from "@solid-primitive/shared";
 import { createContext, useContext, type Accessor } from "solid-js";
 
 export type OverflowItemId = symbol;

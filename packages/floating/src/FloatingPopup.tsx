@@ -1,8 +1,8 @@
-import { createElementSize, onClickOutside, makeEventListener } from "@s-primitives/web";
+import Motion from "@solid-component/motion";
+import { callHandler, mergeStyle } from "@solid-component/utils";
+import { createElementSize, makeEventListener, onClickOutside } from "@solid-primitive/web";
 import { createEffect, createMemo, splitProps, untrack } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import Motion from "@s-components/motion";
-import { callHandler, mergeStyle } from "@s-components/utils";
 import type { FloatingMotionConfig } from "./FloatingContext";
 import { useFloatingContext } from "./FloatingContext";
 import useEscKeyDown from "./hooks/useEscKeyDown";

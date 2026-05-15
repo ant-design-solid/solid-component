@@ -1,5 +1,5 @@
 import { createContext, useContext, type Accessor } from 'solid-js'
-import type { MotionBaseProps, MotionName } from '@s-components/motion'
+import type { MotionBaseProps, MotionName } from '@solid-component/motion'
 import createHasAction from './hooks/createHasAction'
 
 export type AlignPointTopBottom = 't' | 'b' | 'c'

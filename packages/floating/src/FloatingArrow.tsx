@@ -1,5 +1,5 @@
 import { createMemo, splitProps, type JSX } from 'solid-js'
-import { mergeStyle } from '@s-components/utils'
+import { mergeStyle } from '@solid-component/utils'
 import { useFloatingContext } from './FloatingContext'
 
 export interface FloatingArrowProps extends JSX.HTMLAttributes<HTMLDivElement> {}

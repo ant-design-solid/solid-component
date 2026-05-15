@@ -1,10 +1,10 @@
 import Polymorphic, {
   ElementOf,
   PolymorphicProps,
-} from "@s-components/polymorphic";
-import { mergeRefs, mergeStyle } from "@s-components/utils";
-import { access, Optional } from "@s-primitives/shared";
-import { createResizeObserver } from "@s-primitives/web";
+} from "@solid-component/polymorphic";
+import { mergeRefs, mergeStyle } from "@solid-component/utils";
+import { access, Optional } from "@solid-primitive/shared";
+import { createResizeObserver } from "@solid-primitive/web";
 import {
   createMemo,
   createSignal,

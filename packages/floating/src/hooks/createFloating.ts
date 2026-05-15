@@ -1,5 +1,12 @@
-import { type Accessor, createEffect, createMemo, createSignal, untrack } from "solid-js";
-import { createBatcher, isDOM, isVisible } from "@s-components/utils";
+import { isDOM, isVisible } from "@solid-component/utils";
+import { $DISCARD, createBatcher } from "@solid-primitive/shared";
+import {
+  type Accessor,
+  createEffect,
+  createMemo,
+  createSignal,
+  untrack,
+} from "solid-js";
 import type {
   FloatingAlign,
   FloatingContextValue,
@@ -28,7 +35,10 @@ function getNumberOffset(
   offset?: [OffsetType, OffsetType],
 ): [number, number] {
   const [offsetX, offsetY] = offset || [];
-  return [getUnitOffset(rect.width, offsetX), getUnitOffset(rect.height, offsetY)];
+  return [
+    getUnitOffset(rect.width, offsetX),
+    getUnitOffset(rect.height, offsetY),
+  ];
 }
 
 function splitPoints(points: string = ""): Points {
@@ -116,12 +126,12 @@ export default function createFloating(
     if (!popupEl) return [];
     return collectScroller(popupEl);
   });
-  const repositionBatcher = createBatcher<"superseded">({
+  const repositionBatcher = createBatcher({
     strategy: "latest",
-    discardValue: "superseded",
   });
 
-  let prevFlipRef: { tb?: boolean; bt?: boolean; lr?: boolean; rl?: boolean } = {};
+  let prevFlipRef: { tb?: boolean; bt?: boolean; lr?: boolean; rl?: boolean } =
+    {};
 
   const resetFlipCache = () => {
     prevFlipRef = {};
@@ -174,26 +184,49 @@ export default function createFloating(
 
     let targetRect: Rect;
     if (Array.isArray(targetValue)) {
-      targetRect = { x: targetValue[0], y: targetValue[1], width: 0, height: 0 };
+      targetRect = {
+        x: targetValue[0],
+        y: targetValue[1],
+        width: 0,
+        height: 0,
+      };
     } else {
       const targetRectInfo = targetValue.getBoundingClientRect();
-      const rect = cache ? Object.assign(targetRectInfo, cacheTargetRect ?? {}) : targetRectInfo;
+      const rect = cache
+        ? Object.assign(targetRectInfo, cacheTargetRect ?? {})
+        : targetRectInfo;
       if (!cache) {
         cacheTargetRect = { width: rect.width, height: rect.height };
       }
       rect.x = rect.x ?? rect.left;
       rect.y = rect.y ?? rect.top;
-      targetRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      targetRect = {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      };
     }
 
     const rawPopupRect = popupElement.getBoundingClientRect();
-    const { clientWidth, clientHeight, scrollWidth, scrollHeight, scrollTop, scrollLeft } =
-      doc.documentElement;
+    const {
+      clientWidth,
+      clientHeight,
+      scrollWidth,
+      scrollHeight,
+      scrollTop,
+      scrollLeft,
+    } = doc.documentElement;
 
     const targetWidth = targetRect.width;
     const targetHeight = targetRect.height;
 
-    const visibleRegion = { left: 0, top: 0, right: clientWidth, bottom: clientHeight };
+    const visibleRegion = {
+      left: 0,
+      top: 0,
+      right: clientWidth,
+      bottom: clientHeight,
+    };
     const scrollRegion = {
       left: -scrollLeft,
       top: -scrollTop,
@@ -214,9 +247,12 @@ export default function createFloating(
       scrollerList(),
     );
 
-    const visibleArea = htmlRegion === VISIBLE ? visibleRegionArea : scrollRegionArea;
+    const visibleArea =
+      htmlRegion === VISIBLE ? visibleRegionArea : scrollRegionArea;
 
-    const adjustCheckVisibleArea = isVisibleFirst ? visibleRegionArea : visibleArea;
+    const adjustCheckVisibleArea = isVisibleFirst
+      ? visibleRegionArea
+      : visibleArea;
 
     // Record right & bottom align data
     popupElement.style.left = "auto";
@@ -256,13 +292,24 @@ export default function createFloating(
       cacheScale = { scaleX, scaleY };
     }
 
-    if (scaleX === 0 || scaleY === 0 || (isDOM(targetValue) && !isVisible(targetValue))) {
+    if (
+      scaleX === 0 ||
+      scaleY === 0 ||
+      (isDOM(targetValue) && !isVisible(targetValue))
+    ) {
       return false;
     }
 
-    const { offset: placementOffset, targetOffset: placementTargetOffset } = placementInfo;
-    let [popupOffsetX, popupOffsetY] = getNumberOffset(popupRect, placementOffset);
-    const [targetOffsetX, targetOffsetY] = getNumberOffset(targetRect, placementTargetOffset);
+    const { offset: placementOffset, targetOffset: placementTargetOffset } =
+      placementInfo;
+    let [popupOffsetX, popupOffsetY] = getNumberOffset(
+      popupRect,
+      placementOffset,
+    );
+    const [targetOffsetX, targetOffsetY] = getNumberOffset(
+      targetRect,
+      placementTargetOffset,
+    );
 
     targetRect.x -= targetOffsetX;
     targetRect.y -= targetOffsetY;
@@ -281,7 +328,11 @@ export default function createFloating(
     let nextOffsetX = targetAlignPoint.x - popupAlignPoint.x + popupOffsetX;
     let nextOffsetY = targetAlignPoint.y - popupAlignPoint.y + popupOffsetY;
 
-    function getIntersectionVisibleArea(offX: number, offY: number, area = visibleArea) {
+    function getIntersectionVisibleArea(
+      offX: number,
+      offY: number,
+      area = visibleArea,
+    ) {
       const l = popupRect.x + offX;
       const t = popupRect.y + offY;
 
@@ -296,7 +347,10 @@ export default function createFloating(
       return Math.max(0, (visibleR - visibleL) * (visibleB - visibleT));
     }
 
-    const originIntersectionVisibleArea = getIntersectionVisibleArea(nextOffsetX, nextOffsetY);
+    const originIntersectionVisibleArea = getIntersectionVisibleArea(
+      nextOffsetX,
+      nextOffsetY,
+    );
     const originIntersectionRecommendArea = getIntersectionVisibleArea(
       nextOffsetX,
       nextOffsetY,
@@ -335,16 +389,24 @@ export default function createFloating(
     const sameTB = popupPoints[0] === targetPoints[0];
 
     const overflowBottom = nextPopupBottom > adjustCheckVisibleArea.bottom;
-    if (needAdjustY && popupPoints[0] === "t" && (overflowBottom || prevFlipRef.bt)) {
+    if (
+      needAdjustY &&
+      popupPoints[0] === "t" &&
+      (overflowBottom || prevFlipRef.bt)
+    ) {
       let tmpNextOffsetY = nextOffsetY;
 
       if (sameTB) {
         tmpNextOffsetY -= popupHeight - targetHeight;
       } else {
-        tmpNextOffsetY = targetAlignPointTL.y - popupAlignPointBR.y - popupOffsetY;
+        tmpNextOffsetY =
+          targetAlignPointTL.y - popupAlignPointBR.y - popupOffsetY;
       }
 
-      const newVisibleArea = getIntersectionVisibleArea(nextOffsetX, tmpNextOffsetY);
+      const newVisibleArea = getIntersectionVisibleArea(
+        nextOffsetX,
+        tmpNextOffsetY,
+      );
       const newVisibleRecommendArea = getIntersectionVisibleArea(
         nextOffsetX,
         tmpNextOffsetY,
@@ -364,23 +426,34 @@ export default function createFloating(
         prevFlipRef.bt = true;
         nextOffsetY = tmpNextOffsetY;
         popupOffsetY = -popupOffsetY;
-        nextPoints = [reversePoints(nextPoints[0], 0), reversePoints(nextPoints[1], 0)];
+        nextPoints = [
+          reversePoints(nextPoints[0], 0),
+          reversePoints(nextPoints[1], 0),
+        ];
       } else {
         prevFlipRef.bt = false;
       }
     }
 
     const overflowTop = nextPopupY < adjustCheckVisibleArea.top;
-    if (needAdjustY && popupPoints[0] === "b" && (overflowTop || prevFlipRef.tb)) {
+    if (
+      needAdjustY &&
+      popupPoints[0] === "b" &&
+      (overflowTop || prevFlipRef.tb)
+    ) {
       let tmpNextOffsetY = nextOffsetY;
 
       if (sameTB) {
         tmpNextOffsetY += popupHeight - targetHeight;
       } else {
-        tmpNextOffsetY = targetAlignPointBR.y - popupAlignPointTL.y - popupOffsetY;
+        tmpNextOffsetY =
+          targetAlignPointBR.y - popupAlignPointTL.y - popupOffsetY;
       }
 
-      const newVisibleArea = getIntersectionVisibleArea(nextOffsetX, tmpNextOffsetY);
+      const newVisibleArea = getIntersectionVisibleArea(
+        nextOffsetX,
+        tmpNextOffsetY,
+      );
       const newVisibleRecommendArea = getIntersectionVisibleArea(
         nextOffsetX,
         tmpNextOffsetY,
@@ -400,7 +473,10 @@ export default function createFloating(
         prevFlipRef.tb = true;
         nextOffsetY = tmpNextOffsetY;
         popupOffsetY = -popupOffsetY;
-        nextPoints = [reversePoints(nextPoints[0], 0), reversePoints(nextPoints[1], 0)];
+        nextPoints = [
+          reversePoints(nextPoints[0], 0),
+          reversePoints(nextPoints[1], 0),
+        ];
       } else {
         prevFlipRef.tb = false;
       }
@@ -413,16 +489,24 @@ export default function createFloating(
     const sameLR = popupPoints[1] === targetPoints[1];
 
     const overflowRight = nextPopupRight > adjustCheckVisibleArea.right;
-    if (needAdjustX && popupPoints[1] === "l" && (overflowRight || prevFlipRef.rl)) {
+    if (
+      needAdjustX &&
+      popupPoints[1] === "l" &&
+      (overflowRight || prevFlipRef.rl)
+    ) {
       let tmpNextOffsetX = nextOffsetX;
 
       if (sameLR) {
         tmpNextOffsetX -= popupWidth - targetWidth;
       } else {
-        tmpNextOffsetX = targetAlignPointTL.x - popupAlignPointBR.x - popupOffsetX;
+        tmpNextOffsetX =
+          targetAlignPointTL.x - popupAlignPointBR.x - popupOffsetX;
       }
 
-      const newVisibleArea = getIntersectionVisibleArea(tmpNextOffsetX, nextOffsetY);
+      const newVisibleArea = getIntersectionVisibleArea(
+        tmpNextOffsetX,
+        nextOffsetY,
+      );
       const newVisibleRecommendArea = getIntersectionVisibleArea(
         tmpNextOffsetX,
         nextOffsetY,
@@ -442,23 +526,34 @@ export default function createFloating(
         prevFlipRef.rl = true;
         nextOffsetX = tmpNextOffsetX;
         popupOffsetX = -popupOffsetX;
-        nextPoints = [reversePoints(nextPoints[0], 1), reversePoints(nextPoints[1], 1)];
+        nextPoints = [
+          reversePoints(nextPoints[0], 1),
+          reversePoints(nextPoints[1], 1),
+        ];
       } else {
         prevFlipRef.rl = false;
       }
     }
 
     const overflowLeft = nextPopupX < adjustCheckVisibleArea.left;
-    if (needAdjustX && popupPoints[1] === "r" && (overflowLeft || prevFlipRef.lr)) {
+    if (
+      needAdjustX &&
+      popupPoints[1] === "r" &&
+      (overflowLeft || prevFlipRef.lr)
+    ) {
       let tmpNextOffsetX = nextOffsetX;
 
       if (sameLR) {
         tmpNextOffsetX += popupWidth - targetWidth;
       } else {
-        tmpNextOffsetX = targetAlignPointBR.x - popupAlignPointTL.x - popupOffsetX;
+        tmpNextOffsetX =
+          targetAlignPointBR.x - popupAlignPointTL.x - popupOffsetX;
       }
 
-      const newVisibleArea = getIntersectionVisibleArea(tmpNextOffsetX, nextOffsetY);
+      const newVisibleArea = getIntersectionVisibleArea(
+        tmpNextOffsetX,
+        nextOffsetY,
+      );
       const newVisibleRecommendArea = getIntersectionVisibleArea(
         tmpNextOffsetX,
         nextOffsetY,
@@ -479,13 +574,19 @@ export default function createFloating(
         nextOffsetX = tmpNextOffsetX;
         popupOffsetX = -popupOffsetX;
 
-        nextPoints = [reversePoints(nextPoints[0], 1), reversePoints(nextPoints[1], 1)];
+        nextPoints = [
+          reversePoints(nextPoints[0], 1),
+          reversePoints(nextPoints[1], 1),
+        ];
       } else {
         prevFlipRef.lr = false;
       }
     }
 
-    nextAlignInfo.points = [flatPoints(nextPoints[0]), flatPoints(nextPoints[1])];
+    nextAlignInfo.points = [
+      flatPoints(nextPoints[0]),
+      flatPoints(nextPoints[1]),
+    ];
 
     // shift
     syncNextPopupPosition();
@@ -499,7 +600,8 @@ export default function createFloating(
         nextOffsetX -= nextPopupX - visibleRegionArea.left - popupOffsetX;
 
         if (targetRect.x + targetWidth < visibleRegionArea.left + numShiftX) {
-          nextOffsetX += targetRect.x - visibleRegionArea.left + targetWidth - numShiftX;
+          nextOffsetX +=
+            targetRect.x - visibleRegionArea.left + targetWidth - numShiftX;
         }
       }
       // Right
@@ -519,13 +621,15 @@ export default function createFloating(
         // When target if far away from visible area
         // Stop shift
         if (targetRect.y + targetHeight < visibleRegionArea.top + numShiftY) {
-          nextOffsetY += targetRect.y - visibleRegionArea.top + targetHeight - numShiftY;
+          nextOffsetY +=
+            targetRect.y - visibleRegionArea.top + targetHeight - numShiftY;
         }
       }
 
       // Bottom
       if (nextPopupBottom > visibleRegionArea.bottom) {
-        nextOffsetY -= nextPopupBottom - visibleRegionArea.bottom - popupOffsetY;
+        nextOffsetY -=
+          nextPopupBottom - visibleRegionArea.bottom - popupOffsetY;
 
         if (targetRect.y > visibleRegionArea.bottom - numShiftY) {
           nextOffsetY += targetRect.y - visibleRegionArea.bottom + numShiftY;
@@ -563,8 +667,10 @@ export default function createFloating(
     onFloating?.(popupElement, nextAlignInfo);
 
     // Additional calculate right & bottom position
-    let offsetX4Right = popupMirrorRect.right - popupRect.x - (nextOffsetX + popupRect.width);
-    let offsetY4Bottom = popupMirrorRect.bottom - popupRect.y - (nextOffsetY + popupRect.height);
+    let offsetX4Right =
+      popupMirrorRect.right - popupRect.x - (nextOffsetX + popupRect.width);
+    let offsetY4Bottom =
+      popupMirrorRect.bottom - popupRect.y - (nextOffsetY + popupRect.height);
 
     if (scaleX === 1) {
       nextOffsetX = Math.floor(nextOffsetX);
@@ -594,9 +700,9 @@ export default function createFloating(
 
   const reposition: FloatingContextValue["reposition"] = (cache?: boolean) => {
     // 定位请求高频且只关心最后一次结果，用覆盖型批处理避免重复测量。
-    return repositionBatcher.submit(() =>
-      updatePosition(cache) ? "updated" : "skipped",
-    );
+    return repositionBatcher
+      .submit(() => (updatePosition(cache) ? "updated" : "skipped"))
+      .then((value) => (value === $DISCARD ? "superseded" : value));
   };
 
   createEffect(() => {

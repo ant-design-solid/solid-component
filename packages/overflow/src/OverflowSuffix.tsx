@@ -1,5 +1,5 @@
-import { PolymorphicProps } from "@s-components/polymorphic";
-import { mergeStyle } from "@s-components/utils";
+import { PolymorphicProps } from "@solid-component/polymorphic";
+import { mergeStyle } from "@solid-component/utils";
 import {
   createMemo,
   JSX,

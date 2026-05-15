@@ -1,5 +1,5 @@
-import { createSwitchMotion, makeEventListener } from "@s-primitives/web";
-import { noop } from "@s-primitives/shared";
+import { createSwitchMotion, makeEventListener } from "@solid-primitive/web";
+import { noop } from "@solid-primitive/shared";
 import {
   createMemo,
   createSignal,
@@ -11,8 +11,8 @@ import {
   type JSX,
   type ValidComponent,
 } from "solid-js";
-import { ElementOf, Polymorphic, PolymorphicProps } from "@s-components/polymorphic";
-import { access, mergeRefs, mergeStyle } from "@s-components/utils";
+import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
+import { access, mergeRefs, mergeStyle } from "@solid-component/utils";
 import {
   type MotionBaseProps,
   type MotionEndEvent,

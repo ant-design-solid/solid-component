@@ -1,4 +1,4 @@
-import { makeEventListener } from '@s-primitives/web'
+import { makeEventListener } from '@solid-primitive/web'
 import { Accessor, createEffect, createUniqueId, onCleanup } from 'solid-js'
 
 export type EscCallback = (event: KeyboardEvent & { inStackTop: boolean }) => void

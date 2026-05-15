@@ -1,4 +1,4 @@
-import { Assign } from "@s-primitives/shared";
+import { Assign } from "@solid-primitive/shared";
 import { type ComponentProps, type JSX, type ValidComponent, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 

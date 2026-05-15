@@ -1,4 +1,4 @@
-import { PolymorphicProps } from "@s-components/polymorphic";
+import { PolymorphicProps } from "@solid-component/polymorphic";
 import { Show, splitProps, ValidComponent } from "solid-js";
 import OverflowItem from "./OverflowItem";
 import OverflowItems, { OverflowItemsOwnProps } from "./OverflowItems";

@@ -1,4 +1,4 @@
-export { access, tryOnCleanup, type MaybeAccessor, type Assign } from "@s-primitives/shared";
+export { access, tryOnCleanup, type MaybeAccessor, type Assign } from "@solid-primitive/shared";
 import { JSX, Ref } from "solid-js";
 
 

@@ -1,5 +1,5 @@
 {
-  "name": "solid-components",
+  "name": "solid-component",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -13,8 +13,8 @@
   "dependencies": {
     "@mdx-js/mdx": "catalog:docs",
     "@mdx-js/rollup": "catalog:docs",
-    "@s-primitives/shared": "catalog:dev",
-    "@s-primitives/web": "catalog:dev",
+    "@solid-primitive/shared": "catalog:dev",
+    "@solid-primitive/web": "catalog:dev",
     "@solidjs/router": "catalog:docs",
     "@solidjs/start": "catalog:docs",
     "@solidjs/vite-plugin-nitro-2": "^0.1.0",

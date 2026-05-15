@@ -1,9 +1,9 @@
 import { mergeProps, splitProps, type JSX, type ValidComponent } from 'solid-js'
-import type { ElementOf, PolymorphicProps } from '@s-components/polymorphic'
-import { Polymorphic } from '@s-components/polymorphic'
-import { callHandler, mergeRefs } from '@s-components/utils'
+import type { ElementOf, PolymorphicProps } from '@solid-component/polymorphic'
+import { Polymorphic } from '@solid-component/polymorphic'
+import { callHandler, mergeRefs } from '@solid-component/utils'
 import { useFloatingContext } from './FloatingContext'
-import { ValueOf } from '@s-primitives/shared'
+import { ValueOf } from '@solid-primitive/shared'
 
 const HANDLERS = [
   'onClick',

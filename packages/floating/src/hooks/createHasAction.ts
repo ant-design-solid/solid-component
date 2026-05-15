@@ -1,24 +1,26 @@
-import { createShallowCollection } from '@s-primitives/web'
-import { Accessor, batch, createEffect } from 'solid-js'
-import { access } from '@s-primitives/shared'
+import { access, createMutableCollection } from "@solid-primitive/shared";
+import { Accessor, batch, createEffect } from "solid-js";
 
-export type ActionType = 'hover' | 'focus' | 'click' | 'contextMenu'
+export type ActionType = "hover" | "focus" | "click" | "contextMenu";
 
-type NormalizedActionType = Lowercase<ActionType> | 'touch'
+type NormalizedActionType = Lowercase<ActionType> | "touch";
 
-type ExternalActionType = NormalizedActionType | Uppercase<NormalizedActionType> | 'contextMenu'
+type ExternalActionType =
+  | NormalizedActionType
+  | Uppercase<NormalizedActionType>
+  | "contextMenu";
 
-type ActionTypes = ExternalActionType | ExternalActionType[]
+type ActionTypes = ExternalActionType | ExternalActionType[];
 
 function toArray<T>(val?: T | T[]) {
-  return val ? (Array.isArray(val) ? val : [val]) : []
+  return val ? (Array.isArray(val) ? val : [val]) : [];
 }
 
 function normalizeAction(action: ExternalActionType): NormalizedActionType {
-  if (typeof action === 'string') {
-    return action.toLowerCase() as NormalizedActionType
+  if (typeof action === "string") {
+    return action.toLowerCase() as NormalizedActionType;
   }
-  return action
+  return action;
 }
 
 export default function createHasAction(
@@ -26,35 +28,43 @@ export default function createHasAction(
   showAction: Accessor<ActionTypes | undefined>,
   hideAction: Accessor<ActionTypes | undefined>,
 ) {
-  const showActionSet = createShallowCollection(new Set<NormalizedActionType>())
-  const hideActionSet = createShallowCollection(new Set<NormalizedActionType>())
+  const showActionSet = createMutableCollection(
+    new Set<NormalizedActionType>(),
+  );
+  const hideActionSet = createMutableCollection(
+    new Set<NormalizedActionType>(),
+  );
 
   createEffect(() => {
-    const mergedShowActions = toArray(access(showAction) ?? access(action)).map(normalizeAction)
-    const mergedHideActions = toArray(access(hideAction) ?? access(action)).map(normalizeAction)
+    const mergedShowActions = toArray(access(showAction) ?? access(action)).map(
+      normalizeAction,
+    );
+    const mergedHideActions = toArray(access(hideAction) ?? access(action)).map(
+      normalizeAction,
+    );
 
     batch(() => {
-      showActionSet.clear()
-      hideActionSet.clear()
+      showActionSet.clear();
+      hideActionSet.clear();
 
-      mergedShowActions.forEach(action => {
-        showActionSet.add(action)
-      })
-      mergedHideActions.forEach(action => {
-        hideActionSet.add(action)
-      })
+      mergedShowActions.forEach((action) => {
+        showActionSet.add(action);
+      });
+      mergedHideActions.forEach((action) => {
+        hideActionSet.add(action);
+      });
 
-      if (showActionSet.has('hover') && !showActionSet.has('click')) {
-        showActionSet.add('touch')
+      if (showActionSet.has("hover") && !showActionSet.has("click")) {
+        showActionSet.add("touch");
       }
-      if (hideActionSet.has('hover') && !hideActionSet.has('click')) {
-        hideActionSet.add('touch')
+      if (hideActionSet.has("hover") && !hideActionSet.has("click")) {
+        hideActionSet.add("touch");
       }
-    })
-  })
+    });
+  });
 
-  return (type: 'show' | 'hide', action: NormalizedActionType) => {
-    const set = type === 'show' ? showActionSet : hideActionSet
-    return set.has(action)
-  }
+  return (type: "show" | "hide", action: NormalizedActionType) => {
+    const set = type === "show" ? showActionSet : hideActionSet;
+    return set.has(action);
+  };
 }

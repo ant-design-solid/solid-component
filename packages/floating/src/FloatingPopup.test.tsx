@@ -32,7 +32,7 @@ let lastMotionProps:
     }
   | undefined
 
-vi.mock('@s-components/motion', () => ({
+vi.mock('@solid-component/motion', () => ({
   default: (props: { forceRender?: boolean; removeOnLeave?: boolean; onEnterPrepare?: (el: HTMLElement) => Promise<void> | void }) => {
     lastMotionProps = props
     return null
