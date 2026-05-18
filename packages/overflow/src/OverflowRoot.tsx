@@ -22,8 +22,8 @@ import {
   OverflowCollapse,
   OverflowItemId,
   OverflowItemRecord,
-  OverflowRootContext,
-  OverflowRootContextValue,
+  OverflowContext,
+  OverflowContextValue,
   OverflowVisibleRange,
   RegisterOverflowItemOptions,
 } from "./OverflowContext";
@@ -346,15 +346,15 @@ export default function OverflowRoot<T extends ValidComponent>(
     unregisterItem,
 
     getItemWidth,
-  } satisfies OverflowRootContextValue;
+  } satisfies OverflowContextValue;
 
   return (
-    <OverflowRootContext.Provider value={context}>
+    <OverflowContext.Provider value={context}>
       <Polymorphic<OverflowRootOwnProps<ElementOf<T>>>
         as={local.as}
         ref={mergeRefs(local.ref, setRootRef)}
         {...rest}
       />
-    </OverflowRootContext.Provider>
+    </OverflowContext.Provider>
   );
 }

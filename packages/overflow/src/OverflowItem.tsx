@@ -21,7 +21,7 @@ import {
   OverflowItemKey,
   OverflowItemRole,
   useOverflowItemContext,
-  useOverflowRootContext,
+  useOverflowContext,
 } from "./OverflowContext";
 
 interface InternalItemOptions {
@@ -48,7 +48,7 @@ export type InternalItemProps<T extends ValidComponent> = InternalItemOptions &
 export function InternalItem<T extends ValidComponent>(
   props: PolymorphicProps<T, InternalItemProps<T>>,
 ) {
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
   const merged = mergeProps({ role: "item" }, props);
   const [local, rest] = splitProps(merged, [
     "recordId",
@@ -187,7 +187,7 @@ export default function OverflowItem<T extends ValidComponent>(
     "style",
   ]);
 
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
   const itemContext = useOverflowItemContext();
   const id = itemContext?.id || Symbol(`overflow-${local.role}`);
   const order = createMemo(() => {

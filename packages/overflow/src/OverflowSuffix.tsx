@@ -7,7 +7,7 @@ import {
   splitProps,
   ValidComponent,
 } from "solid-js";
-import { useOverflowRootContext } from "./OverflowContext";
+import { useOverflowContext } from "./OverflowContext";
 import { InternalItem } from "./OverflowItem";
 
 export interface OverflowSuffixOwnProps {
@@ -25,7 +25,7 @@ export const SUFFIX_ID = Symbol("overlfow-suffix");
 export default function OverflowSuffix<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowSuffixProps<T>>,
 ) {
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
   const merged = mergeProps(defaults, props as OverflowSuffixProps);
   const [local, rest] = splitProps(merged, ["children", "style"]);
   const style = createMemo(() => {

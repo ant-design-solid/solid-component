@@ -1,6 +1,6 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
 import { JSX, mergeProps, splitProps, ValidComponent } from "solid-js";
-import { useOverflowRootContext } from "./OverflowContext";
+import { useOverflowContext } from "./OverflowContext";
 import { InternalItem } from "./OverflowItem";
 
 export interface OverflowPrefixOwnProps {
@@ -17,7 +17,7 @@ export const PREFIX_ID = Symbol("overlfow-prefix");
 export default function OverflowPrefix<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowPrefixProps<T>>,
 ) {
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
   const merged = mergeProps(defaults, props as OverflowPrefixProps);
   const [local, rest] = splitProps(merged, ["children"]);
 

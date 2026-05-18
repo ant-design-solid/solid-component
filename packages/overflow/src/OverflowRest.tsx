@@ -1,6 +1,6 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
 import { JSX, Show, ValidComponent, mergeProps, splitProps } from "solid-js";
-import { useOverflowRootContext } from "./OverflowContext";
+import { useOverflowContext } from "./OverflowContext";
 import { InternalItem } from "./OverflowItem";
 
 export interface OverflowRestOwnProps {
@@ -23,7 +23,7 @@ export const REST_ID = Symbol("overflow-rest");
 export default function OverflowRest<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowRestProps<T>>,
 ) {
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
   const merged = mergeProps(defaults, props as OverflowRestProps);
   const [local, rest] = splitProps(merged, ["children"]);
 

@@ -21,7 +21,7 @@ export interface OverflowItemRecord {
 
 export type RegisterOverflowItemOptions = OverflowItemRecord;
 
-export interface OverflowRootContextValue {
+export interface OverflowContextValue {
   batcher: Batcher;
 
   responsive: Accessor<boolean>;
@@ -47,10 +47,10 @@ export interface OverflowRootContextValue {
   getItemWidth(record: OverflowItemRecord): number | null;
 }
 
-export const OverflowRootContext = createContext<OverflowRootContextValue>();
+export const OverflowContext = createContext<OverflowContextValue>();
 
-export function useOverflowRootContext() {
-  const context = useContext(OverflowRootContext);
+export function useOverflowContext() {
+  const context = useContext(OverflowContext);
 
   if (!context) {
     throw new Error(

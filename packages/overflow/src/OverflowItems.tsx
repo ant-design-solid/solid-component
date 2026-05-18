@@ -10,7 +10,7 @@ import {
   OverflowItemContext,
   OverflowItemContextValue,
   OverflowItemKey,
-  useOverflowRootContext,
+  useOverflowContext,
 } from "./OverflowContext";
 
 export interface OverflowItemsOwnProps<T extends readonly any[]> {
@@ -27,7 +27,7 @@ export type OverflowItemsProps<T extends readonly any[]> =
 export default function OverflowItems<T extends readonly any[]>(
   props: OverflowItemsOwnProps<T>,
 ) {
-  const rootContext = useOverflowRootContext();
+  const rootContext = useOverflowContext();
 
   const [measurementCount, setMeasurementCount] = createSignal(1);
   const source = createMemo(() => props.each || []);
