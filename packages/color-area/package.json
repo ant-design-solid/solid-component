@@ -1,5 +1,5 @@
 {
-  "name": "@solid-component/utils",
+  "name": "@solid-component/color-area",
   "version": "0.1.0-beta.1",
   "description": "",
   "author": "Kory Lee <https://github.com/korylee>",
@@ -12,6 +12,10 @@
   "module": "dist/index.js",
   "scripts": {
     "build": "tsdown"
+  },
+  "dependencies": {
+    "@solid-component/utils": "workspace:^",
+    "@solid-component/polymorphic": "workspace:^"
   },
   "peerDependencies": {
     "solid-js": "^1.6.5"

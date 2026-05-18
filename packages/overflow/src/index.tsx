@@ -93,9 +93,9 @@ export type {
   OverflowItemKey,
   OverflowItemRecord,
   OverflowItemRole,
-  OverflowRootContextValue,
+  OverflowContextValue,
 } from "./OverflowContext";
 export {
   useOverflowItemContext,
-  useOverflowRootContext,
+  useOverflowContext,
 } from "./OverflowContext";
