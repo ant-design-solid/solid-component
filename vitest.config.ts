@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [solid({ hot: !process.env.VITEST })],
   resolve: {
     alias: {
-      "@s-components/utils": path.resolve(import.meta.dirname, "packages/utils/src"),
-      "@s-components/motion": path.resolve(import.meta.dirname, "packages/motion/src"),
-      "@s-components/polymorphic": path.resolve(import.meta.dirname, "packages/polymorphic/src"),
+      "@solid-component/utils": path.resolve(import.meta.dirname, "packages/utils/src"),
+      "@solid-component/motion": path.resolve(import.meta.dirname, "packages/motion/src"),
+      "@solid-component/polymorphic": path.resolve(import.meta.dirname, "packages/polymorphic/src"),
       // // Vitest 在 Node 条件下会优先命中部分依赖的 CJS 导出，需显式固定到 ESM 入口，避免加载第二份 Solid 运行时。
       // "@s-primitives/shared": path.resolve(
       //   import.meta.dirname,
