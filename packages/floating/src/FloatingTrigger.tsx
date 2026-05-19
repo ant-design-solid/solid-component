@@ -33,18 +33,7 @@ export type FloatingTriggerProps<T extends ValidComponent | HTMLElement = HTMLEl
 
 export default function FloatingTrigger<T extends ValidComponent>(props: PolymorphicProps<T, FloatingTriggerProps<T>>) {
   const merged = mergeProps({ as: 'button' } as const, props as FloatingTriggerProps)
-  const [local, others] = splitProps(merged, [
-    'as',
-    'ref',
-    'onClick',
-    'onTouchStart',
-    'onPointerDown',
-    'onPointerEnter',
-    'onPointerLeave',
-    'onFocus',
-    'onBlur',
-    'onContextMenu',
-  ])
+  const [local, others] = splitProps(merged, ["as", "ref", ...HANDLERS]);
   const context = useFloatingContext()
   const onPointerEnter: FloatingTriggerOwnProps['onPointerEnter'] = e => {
     if (e.pointerType === 'mouse' && context.hasAction('show', 'hover')) {

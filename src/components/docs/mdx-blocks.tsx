@@ -25,8 +25,7 @@ type DemoCardProps = {
     html: string;
     language?: string;
   };
-  codeLanguage?: string;
-  initiallyOpen?: boolean;
+  defaultOpen?: boolean;
   children: JSX.Element;
 };
 
@@ -123,7 +122,7 @@ export function Callout(props: CalloutProps) {
 }
 
 export function DemoCard(props: DemoCardProps) {
-  const [showCode, setShowCode] = createSignal(!!props.initiallyOpen);
+  const [showCode, setShowCode] = createSignal(!!props.defaultOpen);
   const [copied, setCopied] = createSignal(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
 

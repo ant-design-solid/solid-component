@@ -23,7 +23,7 @@ export default function ColorAreaThumb<T extends ValidComponent>(
   const merged = mergeProps(defaults, props);
   const [local, rest] = splitProps(merged, ["as", "style", "children"]);
 
-  const currentColor = createMemo(() => context.color().toRgbString());
+  const currentColor = createMemo(() => context.color().format("rgb"));
   const style = createMemo(() => {
     const offset = context.offset();
     return mergeStyle(

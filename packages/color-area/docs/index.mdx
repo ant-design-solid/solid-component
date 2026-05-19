@@ -1,8 +1,25 @@
+export const meta = {
+  title: "ColorArea",
+  description: "",
+  summary: "",
+  order: 10,
+  keywords: ["color", "color area"],
+};
+
 import Basic from "./basic.tsx";
 import BasicSource from "./basic.tsx?code";
 
+import Format from "./format.tsx";
+import FormatSource from "./format.tsx?code";
+
 ## Example
 
-<DemoCard title="Basic demo" source={BasicSource} codeLanguage="tsx">
+<DemoCard title="Basic demo" source={BasicSource}>
   <Basic />
+</DemoCard>
+
+## Controlled Value
+
+<DemoCard title="Basic demo" source={FormatSource}>
+  <Format />
 </DemoCard>
