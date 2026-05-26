@@ -9,7 +9,7 @@ catalogs:
     solid-js: ^1.9.5
     tsdown: ^0.22.0
     unplugin-solid: ^1.0.0
-    typescript: ^5.9.3
+    typescript: ^6.0.0
     tinyglobby: ^0.2.15
     turbo: ^2.8.12
     vite: ^7.3.1
