@@ -1,4 +1,4 @@
-import { access, createMutableCollection } from "@solid-primitive/shared";
+import { access, createCollection } from "@solid-primitive/shared";
 import { Accessor, batch, createEffect } from "solid-js";
 
 export type ActionType = "hover" | "focus" | "click" | "contextMenu";
@@ -28,10 +28,10 @@ export default function createHasAction(
   showAction: Accessor<ActionTypes | undefined>,
   hideAction: Accessor<ActionTypes | undefined>,
 ) {
-  const showActionSet = createMutableCollection(
+  const showActionSet = createCollection(
     new Set<NormalizedActionType>(),
   );
-  const hideActionSet = createMutableCollection(
+  const hideActionSet = createCollection(
     new Set<NormalizedActionType>(),
   );
 

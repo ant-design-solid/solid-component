@@ -3,10 +3,7 @@ import Polymorphic, {
   PolymorphicProps,
 } from "@solid-component/polymorphic";
 import { mergeRefs } from "@solid-component/utils";
-import {
-  createBatcher,
-  createMutableCollection,
-} from "@solid-primitive/shared";
+import { createBatcher, createCollection } from "@solid-primitive/shared";
 import { createResizeObserver } from "@solid-primitive/web";
 import {
   batch,
@@ -63,7 +60,7 @@ export default function OverflowRoot<T extends ValidComponent>(
     "onVisibleChange",
   ]);
   const [containerWidth, setContainerWidth] = createSignal<number>();
-  const itemRecords = createMutableCollection(
+  const itemRecords = createCollection(
     new Map<OverflowItemId, OverflowItemRecord>(),
   );
   const [sourceCount, setSourceCount] = createSignal(0);
