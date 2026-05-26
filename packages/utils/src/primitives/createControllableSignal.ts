@@ -1,10 +1,10 @@
-import { AnyFunction } from "@solid-primitive/shared";
+import { access, AnyFunction, MaybeAccessor } from "@solid-primitive/shared";
 import { Accessor, createMemo, createSignal, untrack } from "solid-js";
 
 export interface CreateControllableSignalProps<T> {
   value?: Accessor<T | undefined>;
 
-  defaultValue?: T;
+  defaultValue?: MaybeAccessor<T>;
 
   onChange?: (value: T) => void;
 }
@@ -21,11 +21,13 @@ function accessWith<T>(
 export function createControllableSignal<T>(
   props: CreateControllableSignalProps<T>,
 ) {
-  const [_value, _setValue] = createSignal(props.defaultValue);
+  const [_value, _setValue] = createSignal(access(props.defaultValue));
 
   const isControlled = createMemo(() => props.value?.() !== undefined);
 
-  const value = createMemo(() => (isControlled() ? props.value?.() : _value()));
+  const value = createMemo(
+    () => (isControlled() ? props.value?.()! : _value()) as T,
+  );
 
   const setValue = (next: Exclude<T, Function> | ((prev: T) => T)) =>
     untrack(() => {
