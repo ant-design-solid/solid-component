@@ -210,10 +210,12 @@ export class Color {
   }
 
   withHsv(value: Partial<HSV>) {
-    return this._c(normalizeHsva({
-      ...this.hsva,
-      ...value,
-    }));
+    return this._c(
+      normalizeHsva({
+        ...this.hsva,
+        ...value,
+      }),
+    );
   }
 
   getLuminance(): number {
@@ -506,25 +508,5 @@ export class Color {
     return a !== 1
       ? `rgba(${r},${g},${b},${formatAlpha(a!)})`
       : `rgb(${r},${g},${b})`;
-  }
-
-  private getHue() {
-    return this.hsva.h;
-  }
-
-  private getHSVSaturation() {
-    return this.hsva.s;
-  }
-
-  private getHSLSaturation() {
-    return this.toHsl().s;
-  }
-
-  private getLightness() {
-    return this.toHsl().l;
-  }
-
-  private getValue() {
-    return this.hsva.v;
   }
 }
