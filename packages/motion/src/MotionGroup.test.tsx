@@ -2,11 +2,9 @@ import { createSignal } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount, nextFrame } from "../../.test/render";
 import MotionGroup from "./MotionGroup";
-import { resetWarnings } from "../../utils/src/warn";
 
 afterEach(() => {
   document.body.innerHTML = "";
-  resetWarnings();
   vi.restoreAllMocks();
 });
 
@@ -105,12 +103,7 @@ describe("MotionGroup", () => {
     const onLeaveEnd = vi.fn();
 
     const { host, dispose } = mount(() => (
-      <MotionGroup
-        each={items()}
-        onLeaveStart={onLeaveStart}
-        onLeaveEnd={onLeaveEnd}
-        name="fade"
-      >
+      <MotionGroup each={items()} onLeaveStart={onLeaveStart} onLeaveEnd={onLeaveEnd} name="fade">
         {(item) => <MotionGroup.Item as="div">{item}</MotionGroup.Item>}
       </MotionGroup>
     ));
@@ -183,19 +176,14 @@ describe("MotionGroup", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const { dispose } = mount(() => (
-      <MotionGroup
-        each={[{ id: undefined as unknown as number, label: "A" }]}
-        by="id"
-      >
+      <MotionGroup each={[{ id: undefined as unknown as number, label: "A" }]} by="id">
         {(item) => <MotionGroup.Item as="div">{item.label}</MotionGroup.Item>}
       </MotionGroup>
     ));
 
     await nextFrame();
 
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("resolved to an undefined key"),
-    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("resolved to an undefined key"));
 
     dispose();
   });

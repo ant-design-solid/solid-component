@@ -33,7 +33,7 @@ lifecycle model to keyed lists.
 
 <DemoCard
   title="Keyed list transitions"
-  description="`MotionGroup` applies the same motion phases to keyed collections so items can enter and leave independently."
+  description="`MotionGroup` applies the same motion phases to keyed collections so items can enter and leave independently. This demo focuses on insertion and removal, not reorder motion."
   source={GroupSource}
 >
   <Group />
@@ -58,6 +58,8 @@ Each item gets its own motion lifecycle, and `MotionGroup.Item` forwards the sha
 so you only describe the keyed list and the rendered child.
 
 - Pass `by` for object arrays so identity remains stable across inserts and removals.
+- Use add / remove interactions to verify that only the targeted item enters or leaves while the
+  remaining keyed items stay stable.
 - Apply the wrapper layout on `MotionGroup`, then render each animated DOM node with
   `MotionGroup.Item`.
 - Current grouped motion covers appear, enter and leave. Reorder transitions are still out of

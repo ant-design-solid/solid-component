@@ -1,5 +1,4 @@
 import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
-import { createWarning } from "@solid-component/utils";
 import { isObject } from "@solid-primitive/shared";
 import { createListMotion } from "@solid-primitive/web";
 import {
@@ -17,6 +16,7 @@ import {
 } from "solid-js";
 import Motion, { MotionProps } from "./Motion";
 import type { MotionEndEvent, MotionName } from "./types";
+import { error as _error, warning as _warning } from "@solid-component/utils";
 
 type MotionKey = string | number;
 type MotionIdentity = MotionKey | object;
@@ -125,7 +125,6 @@ const defaults = {
 } as const;
 
 const MotionGroupItemContext = createContext<MotionGroupItemContextValue<any>>();
-const warning = createWarning("solid-components");
 
 function resolveMotionIdentity<T>(item: T, by?: MotionGroupBy<T>): MotionIdentity {
   if (typeof by === "function") {
@@ -182,12 +181,19 @@ function getGroupMotionLifecycleProps<T>(
   } satisfies MotionLifecycleProps;
 }
 
-function useMotionGroupItemContext<T>() {
+const LOG_OPTIONS = {
+  package: "motion",
+} as const;
+const error = (message: string) => _error(message, LOG_OPTIONS);
+
+const warning = (message: string) => _warning(message, LOG_OPTIONS);
+
+function useMotionGroupItemContext<T>(): MotionGroupItemContextValue<T> {
   const context = useContext(MotionGroupItemContext) as MotionGroupItemContextValue<T> | undefined;
   if (!context) {
-    throw new Error("[solid-components]: MotionGroup.Item must be used within MotionGroup.");
+    error("MotionGroup.Item must be used within MotionGroup.");
   }
-  return context;
+  return context as MotionGroupItemContextValue<T>;
 }
 
 export function MotionGroupItem<T extends ValidComponent = "div">(
@@ -287,15 +293,13 @@ function MotionGroupRoot<T, C extends ValidComponent = "div">(
 
       if (key === undefined) {
         warning(
-          `MotionGroup item at index ${index} resolved to an undefined key. ` +
-            `Object items should provide a stable "by" prop or return value.`,
+          `MotionGroup item at index ${index} resolved to an undefined key. Object items should provide a stable "by" prop or return value.`,
         );
       }
 
       if (seenKeys.has(key)) {
         warning(
-          `MotionGroup detected a duplicate key "${String(key)}". ` +
-            `Duplicate keys can break enter/leave state tracking.`,
+          `MotionGroup detected a duplicate key "${String(key)}". Duplicate keys can break enter/leave state tracking.`,
         );
       }
 

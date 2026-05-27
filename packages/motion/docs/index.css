@@ -1,0 +1,148 @@
+.docs-motion-demo {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #d8e1d4;
+  border-radius: 18px;
+  background: #f8fbf7;
+}
+
+.docs-motion-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.docs-motion-button {
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.docs-motion-button-primary {
+  border: 1px solid #2f7a4e;
+  background: #2f7a4e;
+  color: #ffffff;
+}
+
+.docs-motion-button-secondary {
+  border: 1px solid #d8e1d4;
+  background: #ffffff;
+  color: #3b4a41;
+}
+
+.docs-motion-button-outline {
+  border: 1px solid #2f7a4e;
+  background: #ffffff;
+  color: #2f7a4e;
+}
+
+.docs-motion-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.docs-fade {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.docs-fade-appear,
+.docs-fade-enter,
+.docs-fade-leave {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.docs-fade-appear-start,
+.docs-fade-enter-start,
+.docs-fade-leave-active {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.docs-fade-appear-active,
+.docs-fade-enter-active,
+.docs-fade-leave-start {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.docs-motion-panel {
+  padding: 18px;
+  border: 1px solid #d8e1d4;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.docs-group-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 42px;
+}
+
+.docs-group-item {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    scale 180ms ease;
+}
+
+.docs-group-item-appear,
+.docs-group-item-enter,
+.docs-group-item-leave {
+  opacity: 1;
+  transform: translateY(0);
+  scale: 1;
+}
+
+.docs-group-item-appear-start,
+.docs-group-item-enter-start,
+.docs-group-item-leave-active {
+  opacity: 0;
+  transform: translateY(8px);
+  scale: 0.92;
+}
+
+.docs-group-item-appear-active,
+.docs-group-item-enter-active,
+.docs-group-item-leave-start {
+  opacity: 1;
+  transform: translateY(0);
+  scale: 1;
+}
+
+.docs-group-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #d8e1d4;
+  color: #24412f;
+  font-weight: 600;
+}
+
+.docs-group-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #2f7a4e;
+  cursor: pointer;
+  flex-shrink: 0;
+}

@@ -317,6 +317,44 @@ describe("Motion", () => {
     dispose();
   });
 
+  it("同一帧内 enter 后立即 leave，不会执行过期 enter 回调", async () => {
+    const calls: string[] = [];
+
+    const { host, dispose, setVisible } = mountWithVisible((visible) => (
+      <Motion
+        visible={visible()}
+        name="fade"
+        onEnterStart={() => {
+          calls.push("enter-start");
+        }}
+        onEnterActive={() => {
+          calls.push("enter-active");
+        }}
+        onLeaveStart={() => {
+          calls.push("leave-start");
+        }}
+        onLeaveActive={() => {
+          calls.push("leave-active");
+        }}
+      >
+        content
+      </Motion>
+    ));
+
+    setVisible(true);
+    setVisible(false);
+    await nextFrame();
+
+    const node = getNode(host);
+    expect(calls).toEqual(["leave-start", "leave-active"]);
+    expect(calls).not.toContain("enter-start");
+    expect(calls).not.toContain("enter-active");
+    expect(node.classList.contains("fade-leave-active")).toBe(true);
+    expect(node.classList.contains("fade-enter-active")).toBe(false);
+
+    dispose();
+  });
+
   it("按顺序执行分阶段 enter 生命周期并挂载 root、phase、active class", async () => {
     const calls: string[] = [];
     const onVisibleChanged = vi.fn();
@@ -563,6 +601,44 @@ describe("Motion", () => {
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
     expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+
+    dispose();
+  });
+
+  it("deadline 完成后忽略后续重复结束事件", async () => {
+    vi.useFakeTimers();
+    const onEnterEnd = vi.fn();
+    const onVisibleChanged = vi.fn();
+
+    const { host, dispose, setVisible } = mountWithVisible((visible) => (
+      <Motion
+        visible={visible()}
+        name="fade"
+        deadline={100}
+        onEnterEnd={onEnterEnd}
+        onVisibleChanged={onVisibleChanged}
+      >
+        content
+      </Motion>
+    ));
+
+    setVisible(true);
+    await Promise.resolve();
+    vi.advanceTimersByTime(16);
+    await Promise.resolve();
+
+    const node = getNode(host);
+
+    vi.advanceTimersByTime(100);
+
+    expect(onEnterEnd).toHaveBeenCalledTimes(1);
+    expect(onVisibleChanged).toHaveBeenCalledTimes(1);
+    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+
+    node.dispatchEvent(new Event("transitionend", { bubbles: true }));
+
+    expect(onEnterEnd).toHaveBeenCalledTimes(1);
+    expect(onVisibleChanged).toHaveBeenCalledTimes(1);
 
     dispose();
   });
