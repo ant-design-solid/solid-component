@@ -1,0 +1,65 @@
+.sc-field {
+  width: 400px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #ffffff;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.sc-field--textarea {
+  align-items: flex-end;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.sc-field__input,
+.sc-field__textarea {
+  display: flex;
+  flex: 1;
+  height: 26px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #1f1f1f;
+  font-size: 13px;
+}
+
+.sc-field__textarea {
+  min-height: 26px;
+  padding-top: 3px;
+  line-height: 1.5;
+}
+
+.sc-field__clear {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #bfbfbf;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sc-field--textarea .sc-field__clear {
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+
+.sc-field__counter {
+  color: #bfbfbf;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sc-field--textarea .sc-field__counter {
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
