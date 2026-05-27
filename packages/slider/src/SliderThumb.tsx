@@ -1,39 +1,24 @@
-import Polymorphic, {
-  ElementOf,
-  PolymorphicProps,
-} from "@solid-component/polymorphic";
+import Polymorphic, { ElementOf, PolymorphicProps } from "@solid-component/polymorphic";
 import { callHandler, mergeRefs, mergeStyle } from "@solid-component/utils";
-import {
-  createEffect,
-  createMemo,
-  JSX,
-  mergeProps,
-  splitProps,
-  ValidComponent,
-} from "solid-js";
+import { createEffect, createMemo, JSX, mergeProps, splitProps, ValidComponent } from "solid-js";
 import { useSliderContext, useSliderThumbContext } from "./SliderContext";
 import { getThumbStyle } from "./utils/direction";
 
-interface SliderThumbCommonProps<
-  T extends HTMLElement = HTMLElement,
-> extends Pick<
+interface SliderThumbCommonProps<T extends HTMLElement = HTMLElement> extends Pick<
   JSX.HTMLAttributes<T>,
-  | "ref"
-  | "style"
-  | "tabIndex"
-  | "onPointerDown"
-  | "onKeyDown"
-  | "onFocus"
-  | "onBlur"
+  "ref" | "style" | "tabIndex" | "onPointerDown" | "onKeyDown" | "onFocus" | "onBlur"
 > {}
 
 export interface SliderThumbOwnProps {
   disabled?: boolean;
 }
 
-export interface SliderThumbProps<
-  T extends ValidComponent | HTMLElement = HTMLElement,
->
+interface SliderThumbElementProps extends SliderThumbCommonProps {
+  role: "slider";
+  tabIndex: number | undefined | string;
+}
+
+export interface SliderThumbProps<T extends ValidComponent | HTMLElement = HTMLElement>
   extends SliderThumbOwnProps, SliderThumbCommonProps<ElementOf<T>> {}
 
 const defaults = {
@@ -45,7 +30,7 @@ export default function SliderThumb<T extends ValidComponent>(
 ) {
   const context = useSliderContext();
   const thumbContext = useSliderThumbContext();
-  const merged = mergeProps(defaults, props);
+  const merged = mergeProps(defaults, props as SliderThumbProps);
   const [local, rest] = splitProps(merged, [
     "as",
     "ref",
@@ -71,13 +56,10 @@ export default function SliderThumb<T extends ValidComponent>(
   });
 
   const style = createMemo(() =>
-    mergeStyle(
-      getThumbStyle(thumb().percent() ?? 0, context.direction()),
-      local.style,
-    ),
+    mergeStyle(getThumbStyle(thumb().percent() ?? 0, context.direction()), local.style),
   );
 
-  const onKeyDown: SliderThumbCommonProps["onKeyDown"] = (event) => {
+  const onKeyDown: SliderThumbProps["onKeyDown"] = (event) => {
     if (!context.disabled() && context.keyboard()) {
       const step = context.step();
       const currentThumb = thumb();
@@ -117,7 +99,7 @@ export default function SliderThumb<T extends ValidComponent>(
     callHandler(event, local.onKeyDown);
   };
 
-  const onPointerDown: SliderThumbCommonProps["onPointerDown"] = (event) => {
+  const onPointerDown: SliderThumbProps["onPointerDown"] = (event) => {
     const id = thumb().id;
     if (id) {
       context.setActiveThumb(id);
@@ -142,15 +124,13 @@ export default function SliderThumb<T extends ValidComponent>(
   };
 
   return (
-    <Polymorphic
+    <Polymorphic<SliderThumbElementProps>
       as={local.as}
       ref={mergeRefs((el) => (thumbRef = el), local.ref)}
       role="slider"
       tabIndex={context.disabled() ? undefined : (local.tabIndex ?? 0)}
       aria-orientation={
-        context.direction() === "ltr" || context.direction() === "rtl"
-          ? "horizontal"
-          : "vertical"
+        context.direction() === "ltr" || context.direction() === "rtl" ? "horizontal" : "vertical"
       }
       aria-valuemin={thumb().min()}
       aria-valuemax={thumb().max()}
