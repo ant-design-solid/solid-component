@@ -9,9 +9,11 @@ export const meta = {
 
 import Basic from "./basic.tsx";
 import BasicSource from "./basic.tsx?code";
+import Group from "./group.tsx";
+import GroupSource from "./group.tsx?code";
 
-Motion is a transition primitive that coordinates appear, enter and leave phases while leaving the
-final DOM element and CSS naming strategy in your hands.
+Motion provides single-node enter/leave orchestration, while `MotionGroup` extends the same
+lifecycle model to keyed lists.
 
 ## When to use
 
@@ -25,9 +27,16 @@ final DOM element and CSS naming strategy in your hands.
   title="Enter / leave preview"
   description="The demo uses a simple CSS name to show how `Motion` coordinates visibility state with transition classes."
   source={BasicSource}
-  
 >
   <Basic />
+</DemoCard>
+
+<DemoCard
+  title="Keyed list transitions"
+  description="`MotionGroup` applies the same motion phases to keyed collections so items can enter and leave independently."
+  source={GroupSource}
+>
+  <Group />
 </DemoCard>
 
 ## Motion phases
@@ -42,6 +51,18 @@ That gives you enough hooks to attach class names, force reflow and wait for mot
 Leave follows the same staged lifecycle, then optionally removes the node when the transition
 finishes.
 
+## MotionGroup
+
+Use `MotionGroup` when the visible state belongs to a collection instead of a single node.
+Each item gets its own motion lifecycle, and `MotionGroup.Item` forwards the shared group config
+so you only describe the keyed list and the rendered child.
+
+- Pass `by` for object arrays so identity remains stable across inserts and removals.
+- Apply the wrapper layout on `MotionGroup`, then render each animated DOM node with
+  `MotionGroup.Item`.
+- Current grouped motion covers appear, enter and leave. Reorder transitions are still out of
+  scope.
+
 ## API overview
 
 <PackageApiTable packageName="motion" />
@@ -51,10 +72,11 @@ finishes.
 - `name` can be a string or a more explicit object when you need complete control over the class
   names for each phase and step.
 - `removeOnLeave` determines whether the element is removed after the leave sequence completes.
-- `MotionGroup` is exported but not implemented yet, so current docs focus on the core `Motion`
-  primitive.
-
-<Callout tone="warn" title="Current limitation">
-  `MotionGroup` is exported but still throws at runtime. Treat it as unavailable until the package
-  implements list orchestration for grouped transitions.
-</Callout>
+- `MotionGroup` supports list `appear` / `enter` / `leave` with an optional `by` prop for stable
+  identity. Primitive lists can omit `by`; object lists are expected to provide it.
+- In development, `MotionGroup` warns when a key resolves to `undefined` or when duplicate keys
+  are detected.
+- `MotionGroup.Item` is the recommended way to bind grouped motion to DOM nodes without manually
+  wiring `ref`, class names or styles.
+- Reorder / move transitions are not implemented yet; current list support is limited to item
+  insertion and removal.

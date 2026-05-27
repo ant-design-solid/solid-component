@@ -1,5 +1,10 @@
-import { createSwitchMotion, makeEventListener } from "@solid-primitive/web";
-import { noop } from "@solid-primitive/shared";
+import {
+  ElementOf,
+  Polymorphic,
+  PolymorphicProps,
+} from "@solid-component/polymorphic";
+import { access, mergeRefs, mergeStyle } from "@solid-component/utils";
+import { createSwitchMotion } from "@solid-primitive/web";
 import {
   createMemo,
   createSignal,
@@ -11,39 +16,65 @@ import {
   type JSX,
   type ValidComponent,
 } from "solid-js";
-import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
-import { access, mergeRefs, mergeStyle } from "@solid-component/utils";
+import { createMotionRunner, type MotionHandlers } from "./motionRunner";
 import {
-  type MotionBaseProps,
-  type MotionEndEvent,
+  MotionEndEvent,
+  MotionName,
   type MotionPhase,
   type MotionStatus,
   type MotionStep,
 } from "./types";
-import { forceReflow, getMotionClassNames, removeMotionClasses } from "./util";
 
-export interface MotionOwnProps<T extends HTMLElement = HTMLElement>
-  extends MotionBaseProps {
-  ref: T | ((el: T) => void);
-  class: string | undefined;
-  style: JSX.CSSProperties | string | undefined;
+export interface MotionLifecycle {
+  onAppearPrepare?: (el: HTMLElement) => void | Promise<void>;
+  onAppearStart?: (el: HTMLElement) => void;
+  onAppearActive?: (el: HTMLElement) => void;
+  onAppearEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
+
+  onEnterPrepare?: (el: HTMLElement) => void | Promise<void>;
+  onEnterStart?: (el: HTMLElement) => void;
+  onEnterActive?: (el: HTMLElement) => void;
+  onEnterEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
+
+  onLeavePrepare?: (el: HTMLElement) => void | Promise<void>;
+  onLeaveStart?: (el: HTMLElement) => void;
+  onLeaveActive?: (el: HTMLElement) => void;
+  onLeaveEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
 }
 
-export type MotionProps<T extends ValidComponent | HTMLElement = HTMLElement> =
-  Partial<MotionOwnProps<ElementOf<T>>>;
-
-interface MotionHandlers {
-  prepare?: (el: HTMLElement) => void | Promise<void>;
-  start?: (el: HTMLElement) => void;
-  active?: (el: HTMLElement) => void;
-  end?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
+export interface MotionOwnProps
+  extends MotionLifecycle, Partial<Record<MotionStatus, boolean>> {
+  visible?: boolean;
+  name?: MotionName;
+  removeOnLeave?: boolean;
+  leavedClassName?: string;
+  deadline?: number;
+  forceRender?: boolean;
+  onVisibleChanged?: (visible: boolean) => void;
+  children?: JSX.Element;
 }
+
+export interface MotionCommonProps<T extends HTMLElement> extends Pick<
+  JSX.HTMLAttributes<T>,
+  "ref" | "class" | "style"
+> {}
+
+export interface MotionProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+>
+  extends MotionOwnProps, MotionCommonProps<ElementOf<T>> {}
 
 interface MotionState {
   phase: MotionPhase;
   step: MotionStep;
   hidden: boolean;
 }
+
+const idleState = (hidden: boolean): MotionState => ({
+  phase: "none",
+  step: "idle",
+  hidden,
+});
 
 const defaults = {
   as: "div",
@@ -52,13 +83,6 @@ const defaults = {
   leave: true,
   removeOnLeave: true,
 } as const;
-
-const idleState = (hidden: boolean): MotionState => ({
-  phase: "none",
-  step: "idle",
-  hidden,
-});
-
 export default function Motion<T extends ValidComponent>(
   props: PolymorphicProps<T, MotionProps<T>>,
 ) {
@@ -97,19 +121,12 @@ export default function Motion<T extends ValidComponent>(
   const initialVisible = access(local.visible);
   const shouldAppear = !!initialVisible && local.appear;
   let hasAppeared = !shouldAppear;
-  let endCleanup: VoidFunction = noop;
-  let disposed = false;
-
-  let motionRunId = 0;
 
   const [elRef, setElRef] = createSignal<HTMLElement>();
-  const [motionState, setMotionState] = createSignal<MotionState>(idleState(!initialVisible));
+  const [motionState, setMotionState] = createSignal<MotionState>(
+    idleState(!initialVisible),
+  );
   const [hasBeenVisible, setHasBeenVisible] = createSignal(initialVisible);
-
-  onCleanup(() => {
-    disposed = true;
-    endCleanup();
-  });
 
   const isMoving = createMemo(() => motionState().phase !== "none");
   const isLeaved = createMemo(() => !isMoving() && motionState().hidden);
@@ -124,32 +141,7 @@ export default function Motion<T extends ValidComponent>(
   };
 
   const finishMotion = (hidden: boolean) => {
-    endCleanup();
-    const el = elRef();
-    if (el) {
-      removeMotionClasses(el, local.name);
-    }
     setMotionState({ phase: "none", step: "end", hidden });
-  };
-
-  const completeImmediately = (
-    el: HTMLElement,
-    hidden: boolean,
-    handlers: MotionHandlers,
-    done: () => void,
-  ) => {
-    void handlers.prepare?.(el);
-    handlers.start?.(el);
-    handlers.active?.(el);
-    handlers.end?.(el, { deadline: true } as MotionEndEvent);
-    finishMotion(hidden);
-    settle(hidden);
-    done();
-  };
-
-  const shouldWaitForMotionEnd = (status: MotionStatus) => {
-    const { root, phase, step } = getMotionClassNames(local.name, status, "active");
-    return !!root || !!phase || !!step || local.deadline != null;
   };
 
   const getMotionHandlers = (status: MotionStatus): MotionHandlers => {
@@ -178,80 +170,17 @@ export default function Motion<T extends ValidComponent>(
     }
   };
 
-  const applyMotionStepClasses = (
-    el: HTMLElement,
-    status: MotionStatus,
-    step: Exclude<MotionStep, "idle" | "end">,
-  ) => {
-    removeMotionClasses(el, local.name);
-    const { root, phase, step: stepClass } = getMotionClassNames(local.name, status, step);
-    const classes = [root, phase, stepClass].filter(Boolean) as string[];
-    if (classes.length > 0) {
-      el.classList.add(...classes);
-    }
-  };
+  const runner = createMotionRunner({
+    element: elRef,
+    name: () => local.name,
+    deadline: () => local.deadline,
+    onStep: (status, step, hidden) => {
+      setStep(status, step, hidden);
+    },
+    onFinish: finishMotion,
+  });
 
-  const runMotion = (el: HTMLElement, status: MotionStatus, enabled: boolean, done: () => void) => {
-    const handlers = getMotionHandlers(status);
-    const hiddenAfterDone = status === "leave";
-    const hiddenDuringMotion = status === "leave" ? false : motionState().hidden;
-    const runId = ++motionRunId;
-
-    endCleanup();
-
-    if (!enabled || !shouldWaitForMotionEnd(status)) {
-      completeImmediately(el, hiddenAfterDone, handlers, done);
-      return;
-    }
-
-    const advance = async () => {
-      setStep(status, "prepare", hiddenDuringMotion);
-      applyMotionStepClasses(el, status, "prepare");
-      await handlers.prepare?.(el);
-
-      if (disposed || runId !== motionRunId || untrack(elRef) !== el) {
-        return;
-      }
-
-      handlers.start?.(el);
-      setStep(status, "start", hiddenDuringMotion);
-      applyMotionStepClasses(el, status, "start");
-
-      forceReflow(el);
-      handlers.active?.(el);
-      setStep(status, "active", hiddenDuringMotion);
-      applyMotionStepClasses(el, status, "active");
-
-      const tryComplete = (event: MotionEndEvent) => {
-        if (!event.deadline && el !== event.target) return;
-        if (runId !== motionRunId) {
-          return;
-        }
-        if (handlers.end?.(el, event) === false) {
-          return;
-        }
-        finishMotion(hiddenAfterDone);
-        settle(hiddenAfterDone);
-        done();
-      };
-
-      const cleanup = makeEventListener(el, ["transitionend", "animationend"], tryComplete);
-      const deadlineTimer =
-        local.deadline != null
-          ? setTimeout(() => {
-              tryComplete({ deadline: true } as MotionEndEvent);
-            }, local.deadline)
-          : null;
-
-      endCleanup = () => {
-        cleanup();
-        deadlineTimer && clearTimeout(deadlineTimer);
-        endCleanup = noop;
-      };
-    };
-
-    void advance();
-  };
+  onCleanup(runner.cleanup);
 
   const items = createSwitchMotion(
     () => (access(local.visible) ? ("visible" as const) : undefined),
@@ -260,7 +189,6 @@ export default function Motion<T extends ValidComponent>(
       appear: shouldAppear,
       onEnter(_el: "visible", done: () => void) {
         requestAnimationFrame(() => {
-          if (disposed) return;
           const el = untrack(elRef);
           if (!el) {
             settle(false);
@@ -268,10 +196,21 @@ export default function Motion<T extends ValidComponent>(
             return;
           }
 
-          const status: MotionStatus = shouldAppear && !hasAppeared ? "appear" : "enter";
+          const status: MotionStatus =
+            shouldAppear && !hasAppeared ? "appear" : "enter";
           hasAppeared = true;
           setHasBeenVisible(true);
-          runMotion(el, status, status === "appear" ? shouldAppear : local.enter, done);
+          runner.runMotion(
+            status,
+            status === "appear" ? shouldAppear : local.enter,
+            motionState().hidden,
+            false,
+            getMotionHandlers(status),
+            () => {
+              settle(false);
+              done();
+            },
+          );
         });
       },
       onExit(_el: "visible" | undefined, done: () => void) {
@@ -282,13 +221,26 @@ export default function Motion<T extends ValidComponent>(
           return;
         }
 
-        runMotion(el, "leave", local.leave, done);
+        runner.runMotion(
+          "leave",
+          local.leave,
+          false,
+          true,
+          getMotionHandlers("leave"),
+          () => {
+            settle(true);
+            done();
+          },
+        );
       },
     },
   );
 
   const shouldRender = createMemo(
-    () => local.forceRender || items().length > 0 || (!local.removeOnLeave && hasBeenVisible()),
+    () =>
+      local.forceRender ||
+      items().length > 0 ||
+      (!local.removeOnLeave && hasBeenVisible()),
   );
 
   const attrs = createMemo(() => {
@@ -311,7 +263,7 @@ export default function Motion<T extends ValidComponent>(
 
   return (
     <Show when={shouldRender()}>
-      <Polymorphic<MotionOwnProps<ElementOf<T>>>
+      <Polymorphic<MotionOwnProps>
         as={local.as}
         ref={mergeRefs(local.ref, setElRef)}
         {...attrs()}
