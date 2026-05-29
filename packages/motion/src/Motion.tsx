@@ -1,6 +1,9 @@
-import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
-import { access, mergeRefs, mergeStyle } from "@solid-component/utils";
-import { noop } from "@solid-primitive/shared";
+import {
+  ElementOf,
+  Polymorphic,
+  PolymorphicProps,
+} from "@solid-component/polymorphic";
+import { access, makeRaf, mergeRefs, mergeStyle } from "@solid-component/utils";
 import { createSwitchMotion } from "@solid-primitive/web";
 import {
   createMemo,
@@ -14,7 +17,12 @@ import {
   type ValidComponent,
 } from "solid-js";
 import { createMotionRunner, type MotionHandlers } from "./motionRunner";
-import { MotionEndEvent, MotionName, type MotionPhase, type MotionStatus } from "./types";
+import {
+  MotionEndEvent,
+  MotionName,
+  type MotionPhase,
+  type MotionStatus,
+} from "./types";
 
 export interface MotionLifecycle {
   onAppearPrepare?: (el: HTMLElement) => void | Promise<void>;
@@ -33,7 +41,8 @@ export interface MotionLifecycle {
   onLeaveEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
 }
 
-export interface MotionOwnProps extends MotionLifecycle, Partial<Record<MotionStatus, boolean>> {
+export interface MotionOwnProps
+  extends MotionLifecycle, Partial<Record<MotionStatus, boolean>> {
   visible?: boolean;
   name?: MotionName;
   removeOnLeave?: boolean;
@@ -49,7 +58,9 @@ export interface MotionCommonProps<T extends HTMLElement> extends Pick<
   "ref" | "class" | "style"
 > {}
 
-export interface MotionProps<T extends ValidComponent | HTMLElement = HTMLElement>
+export interface MotionProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+>
   extends MotionOwnProps, MotionCommonProps<ElementOf<T>> {}
 
 interface MotionState {
@@ -109,7 +120,9 @@ export default function Motion<T extends ValidComponent>(
   let hasAppeared = !shouldAppear;
 
   const [elRef, setElRef] = createSignal<HTMLElement>();
-  const [motionState, setMotionState] = createSignal<MotionState>(idleState(!initialVisible));
+  const [motionState, setMotionState] = createSignal<MotionState>(
+    idleState(!initialVisible),
+  );
   const [hasBeenVisible, setHasBeenVisible] = createSignal(initialVisible);
 
   const isMoving = createMemo(() => motionState().phase !== "none");
@@ -153,8 +166,9 @@ export default function Motion<T extends ValidComponent>(
     },
   });
 
-  const raf = useRaf();
-  let cancelEnterFrame: VoidFunction = noop;
+  const [raf, cancelEnterFrame] = makeRaf();
+
+  onCleanup(cancelEnterFrame);
 
   const startTransition = (
     status: MotionStatus,
@@ -189,8 +203,9 @@ export default function Motion<T extends ValidComponent>(
       mode: "out-in",
       appear: shouldAppear,
       onEnter(_el: "visible", done: () => void) {
-        cancelEnterFrame = raf(() => {
-          const status: MotionStatus = shouldAppear && !hasAppeared ? "appear" : "enter";
+        raf(() => {
+          const status: MotionStatus =
+            shouldAppear && !hasAppeared ? "appear" : "enter";
           hasAppeared = true;
           setHasBeenVisible(true);
           startTransition(
@@ -210,7 +225,10 @@ export default function Motion<T extends ValidComponent>(
   );
 
   const shouldRender = createMemo(
-    () => local.forceRender || items().length > 0 || (!local.removeOnLeave && hasBeenVisible()),
+    () =>
+      local.forceRender ||
+      items().length > 0 ||
+      (!local.removeOnLeave && hasBeenVisible()),
   );
 
   const attrs = createMemo(() => {
@@ -243,26 +261,4 @@ export default function Motion<T extends ValidComponent>(
       </Polymorphic>
     </Show>
   );
-}
-
-function useRaf() {
-  let frameId: number | undefined;
-
-  const cancel = () => {
-    if (frameId != null) {
-      cancelAnimationFrame(frameId);
-    }
-  };
-  const raf = (callback: VoidFunction) => {
-    cancel();
-    frameId = requestAnimationFrame(() => {
-      frameId = undefined;
-      callback();
-    });
-
-    return cancel;
-  };
-  onCleanup(cancel);
-
-  return raf;
 }
