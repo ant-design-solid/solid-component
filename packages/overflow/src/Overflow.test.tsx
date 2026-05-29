@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSignal } from "solid-js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import Overflow from ".";
 import { mount, nextFrame } from "../../.test/render";
 import { measureElement } from "../../.test/resize-observer";
-import Overflow from ".";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -11,14 +11,14 @@ afterEach(() => {
 
 describe("Overflow", () => {
   it("limits the initial responsive render to the measurement window", async () => {
-    const items = Array.from({ length: 20 }, (_, index) => ({
+    const items = Array.from({ length: 50 }, (_, index) => ({
       key: index,
       label: `Item ${index}`,
     }));
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li" />
@@ -35,14 +35,14 @@ describe("Overflow", () => {
   });
 
   it("measures from the tail when collapse is start", async () => {
-    const items = Array.from({ length: 20 }, (_, index) => ({
+    const items = Array.from({ length: 50 }, (_, index) => ({
       key: index,
       label: `Item ${index}`,
     }));
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive" collapse="start">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li" />
@@ -53,7 +53,7 @@ describe("Overflow", () => {
 
     const root = host.querySelector("ul")!;
     expect(root.children).toHaveLength(2);
-    expect(root.children[0].textContent).toBe("Item 19");
+    expect(root.children[0].textContent).toBe("Item 49");
 
     dispose();
   });
@@ -66,7 +66,7 @@ describe("Overflow", () => {
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive" collapse="start">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -93,9 +93,7 @@ describe("Overflow", () => {
     }
 
     expect(
-      Array.from(root.children).find(
-        (child) => child.textContent === "Item 3",
-      ),
+      Array.from(root.children).find((child) => child.textContent === "Item 3"),
     ).toBe(last);
 
     dispose();
@@ -110,7 +108,7 @@ describe("Overflow", () => {
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul">
         <Overflow.Prefix as="li">Prefix</Overflow.Prefix>
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li" />
@@ -122,9 +120,237 @@ describe("Overflow", () => {
 
     const root = host.querySelector("ul");
     expect(root).not.toBeNull();
-    expect(
-      Array.from(root!.children).map((node) => node.textContent),
-    ).toEqual(["Prefix", "Alpha", "Beta", "Suffix"]);
+    expect(Array.from(root!.children).map((node) => node.textContent)).toEqual([
+      "Prefix",
+      "Alpha",
+      "Beta",
+      "Suffix",
+    ]);
+
+    dispose();
+  });
+
+  it("limits visible items with numeric maxCount and shows rest", async () => {
+    const items = [
+      { key: "a", label: "Alpha" },
+      { key: "b", label: "Beta" },
+      { key: "c", label: "Gamma" },
+    ];
+
+    const { host, dispose } = mount(() => (
+      <Overflow.Root as="ul" maxCount={2}>
+        <Overflow.Items data={items} by="key">
+          {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
+        </Overflow.Items>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.querySelector("ul")!;
+    const [first, second, third, rest] = Array.from(
+      root.children,
+    ) as HTMLElement[];
+
+    expect(rest.textContent).toBe("+1");
+    expect(first.getAttribute("aria-hidden")).toBe("false");
+    expect(second.getAttribute("aria-hidden")).toBe("false");
+    expect(third.getAttribute("aria-hidden")).toBe("true");
+
+    dispose();
+  });
+
+  it("supports standalone items with numeric maxCount", async () => {
+    const { host, dispose } = mount(() => (
+      <Overflow.Root as="ul" maxCount={2}>
+        <Overflow.Item as="li" order={0}>
+          Alpha
+        </Overflow.Item>
+        <Overflow.Item as="li" order={1}>
+          Beta
+        </Overflow.Item>
+        <Overflow.Item as="li" order={2}>
+          Gamma
+        </Overflow.Item>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.querySelector("ul")!;
+    const [first, second, third, rest] = Array.from(
+      root.children,
+    ) as HTMLElement[];
+
+    expect(rest.textContent).toBe("+1");
+    expect(first.getAttribute("aria-hidden")).toBe("false");
+    expect(second.getAttribute("aria-hidden")).toBe("false");
+    expect(third.getAttribute("aria-hidden")).toBe("true");
+
+    dispose();
+  });
+
+  it("supports standalone items with collapse start", async () => {
+    const { host, dispose } = mount(() => (
+      <Overflow.Root as="ul" maxCount={2} collapse="start">
+        <Overflow.Item as="li" order={0}>
+          Alpha
+        </Overflow.Item>
+        <Overflow.Item as="li" order={1}>
+          Beta
+        </Overflow.Item>
+        <Overflow.Item as="li" order={2}>
+          Gamma
+        </Overflow.Item>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.querySelector("ul")!;
+    const [first, second, third, rest] = Array.from(
+      root.children,
+    ) as HTMLElement[];
+
+    expect(rest.textContent).toBe("+1");
+    expect(first.getAttribute("aria-hidden")).toBe("true");
+    expect(second.getAttribute("aria-hidden")).toBe("false");
+    expect(third.getAttribute("aria-hidden")).toBe("false");
+
+    dispose();
+  });
+
+  it("calls onVisibleChange with the visible item count in numeric mode", async () => {
+    const onVisibleChange = vi.fn();
+    const items = [
+      { key: "a", label: "Alpha" },
+      { key: "b", label: "Beta" },
+      { key: "c", label: "Gamma" },
+    ];
+
+    const { dispose } = mount(() => (
+      <Overflow.Root as="ul" maxCount={2} onVisibleChange={onVisibleChange}>
+        <Overflow.Items data={items} by="key">
+          {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
+        </Overflow.Items>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    expect(onVisibleChange).toHaveBeenCalledWith(2);
+
+    dispose();
+  });
+
+  it("passes onVisibleChange through the compact Overflow API", async () => {
+    const onVisibleChange = vi.fn();
+    const items = [
+      { key: "a", label: "Alpha" },
+      { key: "b", label: "Beta" },
+      { key: "c", label: "Gamma" },
+    ];
+
+    const { dispose } = mount(() => (
+      <Overflow
+        data={items}
+        by="key"
+        maxCount={2}
+        onVisibleChange={onVisibleChange}
+      >
+        {(item) => item.label}
+      </Overflow>
+    ));
+
+    await nextFrame();
+
+    expect(onVisibleChange).toHaveBeenCalledWith(2);
+
+    dispose();
+  });
+
+  it("calls onVisibleChange with the latest visible item count in responsive mode", async () => {
+    const onVisibleChange = vi.fn();
+    const items = [
+      { key: "a", label: "Alpha" },
+      { key: "b", label: "Beta" },
+      { key: "c", label: "Gamma" },
+    ];
+
+    const { host, dispose } = mount(() => (
+      <Overflow.Root
+        as="ul"
+        maxCount="responsive"
+        onVisibleChange={onVisibleChange}
+      >
+        <Overflow.Items data={items} by="key">
+          {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
+        </Overflow.Items>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.querySelector("ul")!;
+    await measureElement(root, 80);
+
+    const listItems = Array.from(root.children) as HTMLElement[];
+    await measureElement(listItems[0], 30);
+    await measureElement(listItems[1], 30);
+    await measureElement(listItems[2], 30);
+
+    const rest = root.children[3] as HTMLElement;
+    await measureElement(rest, 20);
+    await nextFrame();
+
+    expect(onVisibleChange).toHaveBeenLastCalledWith(2);
+
+    await measureElement(root, 120);
+    await nextFrame();
+
+    expect(onVisibleChange).toHaveBeenLastCalledWith(3);
+
+    dispose();
+  });
+
+  it("disables overflow positioning when maxCount is invalidate", async () => {
+    const items = [
+      { key: "a", label: "Alpha" },
+      { key: "b", label: "Beta" },
+      { key: "c", label: "Gamma" },
+    ];
+
+    const { host, dispose } = mount(() => (
+      <Overflow.Root as="ul" maxCount="invalidate">
+        <Overflow.Items data={items} by="key">
+          {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
+        </Overflow.Items>
+        <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
+      </Overflow.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.querySelector("ul")!;
+    const children = Array.from(root.children) as HTMLElement[];
+
+    expect(children.map((child) => child.textContent)).toEqual([
+      "Alpha",
+      "Beta",
+      "Gamma",
+    ]);
+
+    for (const child of children) {
+      expect(child.style.position).toBe("");
+      expect(child.style.opacity).toBe("");
+      expect(child.style.order).toBe("");
+      expect(child.getAttribute("aria-hidden")).toBe("false");
+    }
 
     dispose();
   });
@@ -138,7 +364,7 @@ describe("Overflow", () => {
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -176,7 +402,7 @@ describe("Overflow", () => {
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive" collapse="start">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -222,7 +448,7 @@ describe("Overflow", () => {
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive" collapse="start">
         <Overflow.Prefix as="li">Prefix</Overflow.Prefix>
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -281,7 +507,7 @@ describe("Overflow", () => {
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive">
         <Overflow.Prefix as="li">Prefix</Overflow.Prefix>
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -324,7 +550,7 @@ describe("Overflow", () => {
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive">
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -379,7 +605,7 @@ describe("Overflow", () => {
         style={{ display: "flex", gap: "8px", position: "relative" }}
       >
         <Overflow.Prefix as="li">Prefix</Overflow.Prefix>
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -429,7 +655,7 @@ describe("Overflow", () => {
         style={{ display: "flex", gap: "8px", position: "relative" }}
       >
         <Overflow.Prefix as="li">Prefix</Overflow.Prefix>
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>
@@ -478,7 +704,7 @@ describe("Overflow", () => {
 
     const { host, dispose } = mount(() => (
       <Overflow.Root as="ul" maxCount="responsive">
-        <Overflow.Items each={items()} itemKey="key">
+        <Overflow.Items data={items()} by="key">
           {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
         </Overflow.Items>
         <Overflow.Rest as="li">{(count) => `+${count}`}</Overflow.Rest>

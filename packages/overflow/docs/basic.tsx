@@ -32,7 +32,7 @@ export default function BasicDemo() {
           Selected:
         </Overflow.Prefix>
 
-        <Overflow.Items each={items} itemKey="key">
+        <Overflow.Items data={items} by="key">
           {(item) => (
             <Overflow.Item
               as="li"

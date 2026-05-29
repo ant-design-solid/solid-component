@@ -1,10 +1,13 @@
+import { KeyOf, ValueOf } from "@solid-primitive/shared";
 import {
   Accessor,
   createEffect,
   createMemo,
   createSignal,
   For,
-  JSX
+  JSX,
+  mergeProps,
+  onCleanup,
 } from "solid-js";
 import {
   OverflowItemContext,
@@ -14,9 +17,9 @@ import {
 } from "./OverflowContext";
 
 export interface OverflowItemsOwnProps<T extends readonly any[]> {
-  itemKey?: OverflowItemKey | ((item: T[number]) => OverflowItemKey);
+  by?: KeyOf<ValueOf<T>> | ((item: T[number]) => OverflowItemKey);
   estimatedItemWidth?: number;
-  each: T | undefined | null | false;
+  data: T | undefined | null | false;
   fallback?: JSX.Element;
   children: (item: T[number], index: Accessor<number>) => JSX.Element;
 }
@@ -24,22 +27,31 @@ export interface OverflowItemsOwnProps<T extends readonly any[]> {
 export type OverflowItemsProps<T extends readonly any[]> =
   OverflowItemsOwnProps<T>;
 
+const defaults = {
+  estimatedItemWidth: 10,
+} as const;
 export default function OverflowItems<T extends readonly any[]>(
   props: OverflowItemsOwnProps<T>,
 ) {
-  const rootContext = useOverflowContext();
+  const merged = mergeProps(defaults, props);
+  const { responsive, setSourceCount, containerWidth, shouldExpand, collapse } =
+    useOverflowContext();
 
+  const source = createMemo(() => merged.data || []);
   const [measurementCount, setMeasurementCount] = createSignal(1);
-  const source = createMemo(() => props.each || []);
 
   createEffect(() => {
-    rootContext.setSourceCount(source().length);
+    setSourceCount(source().length);
+  });
+
+  onCleanup(() => {
+    setSourceCount(null);
   });
 
   createEffect(() => {
     const total = source().length;
 
-    if (!rootContext.responsive()) {
+    if (!responsive()) {
       setMeasurementCount(total);
       return;
     }
@@ -49,17 +61,16 @@ export default function OverflowItems<T extends readonly any[]>(
       return;
     }
 
-    const estimatedItemWidth = props.estimatedItemWidth ?? 10;
-    const containerWidth = rootContext.containerWidth();
-    const baseCount = containerWidth
-      ? Math.max(1, Math.floor(containerWidth / estimatedItemWidth))
+    const width = containerWidth();
+    const baseCount = width
+      ? Math.max(1, Math.floor(width / merged.estimatedItemWidth))
       : 1;
 
     setMeasurementCount((prev) => Math.min(total, Math.max(baseCount, prev)));
   });
 
   createEffect(() => {
-    if (!rootContext.needMoreItems()) {
+    if (!shouldExpand()) {
       return;
     }
 
@@ -71,7 +82,7 @@ export default function OverflowItems<T extends readonly any[]>(
 
   const measuredStartIndex = createMemo(() => {
     const list = source();
-    if (!rootContext.responsive() || rootContext.collapse() !== "start") {
+    if (!responsive() || collapse() !== "start") {
       return 0;
     }
 
@@ -80,7 +91,7 @@ export default function OverflowItems<T extends readonly any[]>(
 
   const measuredSource = createMemo(() => {
     const list = source();
-    if (!rootContext.responsive()) {
+    if (!responsive()) {
       return list;
     }
 
@@ -93,28 +104,21 @@ export default function OverflowItems<T extends readonly any[]>(
   return (
     <For each={measuredSource()} fallback={props.fallback}>
       {(item, index) => {
-        const id = Symbol("overflow-item");
         const sourceIndex = createMemo(() => measuredStartIndex() + index());
-        const itemKey = () => {
-          if (typeof props.itemKey === "function") {
-            return props.itemKey(item);
+        const id = () => {
+          if (typeof props.by === "function") {
+            return props.by(item);
           }
-          if (props.itemKey != null) {
-            return (item as any)?.[props.itemKey] ?? sourceIndex();
+          if (props.by != null) {
+            return item?.[props.by] ?? sourceIndex();
           }
           return sourceIndex();
         };
-        const show = createMemo(() => {
-          const [start, end] = rootContext.visibleRange();
-          return sourceIndex() >= start && sourceIndex() <= end;
-        });
 
         const itemContext = {
-          id,
-          itemKey: itemKey(),
+          key: id(),
           order: sourceIndex,
           role: "item",
-          show,
         } satisfies OverflowItemContextValue;
 
         return (

@@ -14,32 +14,32 @@ function defaultRenderRest(omittedCount: number) {
   return `+ ${omittedCount} ...`;
 }
 
+export const REST_UID = Symbol("overflow-rest");
+
 const defaults = {
   children: defaultRenderRest,
 } as const;
-
-export const REST_ID = Symbol("overflow-rest");
-
 export default function OverflowRest<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowRestProps<T>>,
 ) {
-  const rootContext = useOverflowContext();
+  const { omittedCount, renderRest, invalidate, responsive, visibleRange } =
+    useOverflowContext();
   const merged = mergeProps(defaults, props as OverflowRestProps);
   const [local, rest] = splitProps(merged, ["children"]);
 
   return (
-    <Show when={rootContext.renderRest()}>
+    <Show when={renderRest()}>
       <InternalItem
-        recordId={REST_ID}
+        uid={REST_UID}
         role="rest"
-        show={rootContext.showRest()}
-        order={rootContext.displayCount()}
-        invalidate={rootContext.invalidate()}
-        responsive={rootContext.responsive()}
+        show={omittedCount() > 0}
+        order={visibleRange()[1]}
+        invalidate={invalidate()}
+        responsive={responsive()}
         {...rest}
       >
         {typeof local.children === "function"
-          ? local.children(rootContext.omittedCount())
+          ? local.children(omittedCount())
           : local.children}
       </InternalItem>
     </Show>

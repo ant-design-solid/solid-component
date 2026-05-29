@@ -17,16 +17,16 @@ import {
 } from "solid-js";
 import {
   OverflowCollapse,
-  OverflowItemId,
   OverflowItemRecord,
+  OverflowItemUid,
   OverflowContext,
   OverflowContextValue,
   OverflowVisibleRange,
   RegisterOverflowItemOptions,
 } from "./OverflowContext";
-import { PREFIX_ID } from "./OverflowPrefix";
-import { REST_ID } from "./OverflowRest";
-import { SUFFIX_ID } from "./OverflowSuffix";
+import { PREFIX_UID } from "./OverflowPrefix";
+import { REST_UID } from "./OverflowRest";
+import { SUFFIX_UID } from "./OverflowSuffix";
 
 const RESPONSIVE = "responsive" as const;
 const INVALIDATE = "invalidate" as const;
@@ -50,7 +50,9 @@ const defaults = {
 export default function OverflowRoot<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowRootProps<T>>,
 ) {
-  const batcher = createBatcher();
+  const batcher = createBatcher({
+    schedule: "microtask",
+  });
   const merged = mergeProps(defaults, props as OverflowRootProps);
   const [local, rest] = splitProps(merged, [
     "as",
@@ -61,9 +63,11 @@ export default function OverflowRoot<T extends ValidComponent>(
   ]);
   const [containerWidth, setContainerWidth] = createSignal<number>();
   const itemRecords = createCollection(
-    new Map<OverflowItemId, OverflowItemRecord>(),
+    new Map<OverflowItemUid, OverflowItemRecord>(),
   );
-  const [sourceCount, setSourceCount] = createSignal(0);
+  const [sourceCountOverride, setSourceCountOverride] = createSignal<
+    number | null
+  >(null);
   const [visibleRange, setVisibleRange] = createSignal<OverflowVisibleRange>([
     0, 0,
   ]);
@@ -73,12 +77,21 @@ export default function OverflowRoot<T extends ValidComponent>(
 
   const [rootRef, setRootRef] = createSignal<HTMLElement>();
 
-  const restRecord = createMemo(() => itemRecords.get(REST_ID));
+  const renderedItems = createMemo(() =>
+    Array.from(itemRecords.values())
+      .filter((record) => record.role === "item")
+      .sort((a, b) => a.order() - b.order()),
+  );
+  const sourceCount = createMemo(
+    () => sourceCountOverride() ?? renderedItems().length,
+  );
+
+  const restRecord = createMemo(() => itemRecords.get(REST_UID));
   const measuredRestWidth = createMemo(() => restRecord()?.width() ?? null);
   const restWidth = createMemo(() => measuredRestWidth() ?? 0);
-  const prefixRecord = createMemo(() => itemRecords.get(PREFIX_ID));
+  const prefixRecord = createMemo(() => itemRecords.get(PREFIX_UID));
   const prefixWidth = createMemo(() => prefixRecord()?.width() ?? 0);
-  const suffixRecord = createMemo(() => itemRecords.get(SUFFIX_ID));
+  const suffixRecord = createMemo(() => itemRecords.get(SUFFIX_UID));
   const suffixWidth = createMemo(() => suffixRecord()?.width() ?? 0);
 
   const [stableRestWidth, setStableRestWidth] = createSignal(0);
@@ -107,26 +120,17 @@ export default function OverflowRoot<T extends ValidComponent>(
     });
   });
 
-  onMount(() => {
+  createEffect(() => {
     const el = rootRef();
     el && setContainerWidth(el.clientWidth);
   });
 
-  const renderedItems = createMemo(() =>
-    Array.from(itemRecords.values())
-      .filter((record) => record.role === "item")
-      .sort((a, b) => a.order() - b.order()),
-  );
-  const omittedCount = createMemo(() =>
-    Math.max(
-      sourceCount() - Math.max(visibleRange()[1] - visibleRange()[0] + 1, 0),
-      0,
-    ),
-  );
-  const displayCount = createMemo(() => visibleRange()[1]);
+  const omittedCount = createMemo(() => {
+    const [start, end] = visibleRange();
+    return Math.max(sourceCount() - Math.max(end - start + 1, 0), 0);
+  });
 
-  const showRest = createMemo(() => renderRest() && omittedCount() > 0);
-  const needMoreItems = createMemo(() => {
+  const shouldExpand = createMemo(() => {
     if (!shouldResponsive()) {
       return false;
     }
@@ -153,15 +157,16 @@ export default function OverflowRoot<T extends ValidComponent>(
 
     return end >= items[items.length - 1].order();
   });
+
   const registerItem = (options: RegisterOverflowItemOptions) => {
-    itemRecords.set(options.id, options);
+    itemRecords.set(options.uid, options);
   };
 
-  const unregisterItem = (id: OverflowItemId) => {
-    itemRecords.delete(id);
+  const unregisterItem = (uid: OverflowItemUid) => {
+    itemRecords.delete(uid);
   };
 
-  const getItemWidth = (val: any) => {
+  const getItemWidth = (val: OverflowItemUid | OverflowItemRecord) => {
     let record: OverflowItemRecord | undefined;
     if (typeof val === "symbol") {
       record = itemRecords.get(val);
@@ -171,6 +176,10 @@ export default function OverflowRoot<T extends ValidComponent>(
     if (!record) return null;
 
     return record.width();
+  };
+
+  const setSourceCount = (count: number | null) => {
+    setSourceCountOverride(count);
   };
 
   const getInlineGap = () => {
@@ -203,13 +212,41 @@ export default function OverflowRoot<T extends ValidComponent>(
 
     setSuffixInsetStart(null);
 
-    if (!container) {
+    const len = currentItems.length;
+    if (!len) {
+      commitVisibleRange([0, -1], 0);
       return;
     }
 
-    const len = currentItems.length;
-    if (!len) {
-      setVisibleRange([0, -1]);
+    if (!isResponsive()) {
+      const lastIndex = len - 1;
+      const firstOrder = currentItems[0].order();
+      const lastOrder = currentItems[lastIndex].order();
+
+      if (typeof local.maxCount !== "number") {
+        commitVisibleRange([firstOrder, lastOrder], len);
+        return;
+      }
+
+      const visibleCount = Math.max(0, Math.min(local.maxCount, len));
+
+      if (visibleCount === 0) {
+        commitVisibleRange([firstOrder, firstOrder - 1], 0);
+        return;
+      }
+
+      if (collapse() === "start") {
+        const startOrder = currentItems[len - visibleCount].order();
+        commitVisibleRange([startOrder, lastOrder], visibleCount);
+        return;
+      }
+
+      const endOrder = currentItems[visibleCount - 1].order();
+      commitVisibleRange([firstOrder, endOrder], visibleCount);
+      return;
+    }
+
+    if (!container) {
       return;
     }
 
@@ -328,17 +365,16 @@ export default function OverflowRoot<T extends ValidComponent>(
     containerWidth,
 
     renderRest,
-    showRest,
-    needMoreItems,
+    shouldExpand,
 
     sourceCount,
-    displayCount,
+    setSourceCount,
+
     visibleRange,
     omittedCount,
 
     suffixInsetStart,
 
-    setSourceCount,
     registerItem,
     unregisterItem,
 

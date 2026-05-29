@@ -1,33 +1,27 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
 import { mergeStyle } from "@solid-component/utils";
-import {
-  createMemo,
-  JSX,
-  mergeProps,
-  splitProps,
-  ValidComponent,
-} from "solid-js";
+import { createMemo, JSX, splitProps, ValidComponent } from "solid-js";
 import { useOverflowContext } from "./OverflowContext";
 import { InternalItem } from "./OverflowItem";
 
-export interface OverflowSuffixOwnProps {
-  children: JSX.Element;
-  style: JSX.CSSProperties | string;
-}
+export interface OverflowSuffixOwnProps {}
 
-export type OverflowSuffixProps<T extends ValidComponent = "div"> =
-  Partial<OverflowSuffixOwnProps>;
+interface OverflowSuffixCommonProps<T> extends Pick<
+  JSX.HTMLAttributes<T>,
+  "style"
+> {}
 
-const defaults = {} as const;
+export interface OverflowSuffixProps<T extends ValidComponent = "div">
+  extends OverflowSuffixOwnProps, OverflowSuffixCommonProps<T> {}
 
-export const SUFFIX_ID = Symbol("overlfow-suffix");
+export const SUFFIX_UID = Symbol("overflow-suffix");
 
 export default function OverflowSuffix<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowSuffixProps<T>>,
 ) {
   const rootContext = useOverflowContext();
-  const merged = mergeProps(defaults, props as OverflowSuffixProps);
-  const [local, rest] = splitProps(merged, ["children", "style"]);
+  const [local, rest] = splitProps(props as OverflowSuffixProps, ["style"]);
+
   const style = createMemo(() => {
     const suffixInsetStart = rootContext.suffixInsetStart();
     if (!rootContext.responsive() || suffixInsetStart == null) {
@@ -42,16 +36,14 @@ export default function OverflowSuffix<T extends ValidComponent>(
 
   return (
     <InternalItem
-      recordId={SUFFIX_ID}
+      uid={SUFFIX_UID}
       role="suffix"
       show={true}
-      order={rootContext.displayCount()}
+      order={rootContext.visibleRange()[1]}
       invalidate={rootContext.invalidate()}
       responsive={rootContext.responsive()}
       style={style()}
       {...rest}
-    >
-      {local.children}
-    </InternalItem>
+    />
   );
 }
