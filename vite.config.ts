@@ -1,11 +1,12 @@
-import { defineConfig } from "vite";
-import { fileURLToPath, URL } from "node:url";
-import { readFile } from "node:fs/promises";
 import { nitroV2Plugin as nitro } from "@solidjs/vite-plugin-nitro-2";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from "vite";
 
-import { solidStart } from "@solidjs/start/config";
 import mdx from "@mdx-js/rollup";
+import { solidStart } from "@solidjs/start/config";
 import rehypePrettyCode from "rehype-pretty-code";
+import { internalPackageSource } from "./build-plugins/internal-package-source";
 
 import {
   getCodeTheme,
@@ -25,6 +26,7 @@ export default defineConfig({
     ],
   },
   plugins: [
+    internalPackageSource(),
     {
       name: "docs-code-preview",
       async load(id) {
