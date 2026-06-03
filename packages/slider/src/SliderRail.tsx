@@ -2,8 +2,8 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { callHandler, mergeRefs } from "@solid-component/utils";
-import { JSX, mergeProps, splitProps, ValidComponent } from "solid-js";
+import { composeHandlers, mergeRefs } from "@solid-component/utils";
+import { JSX, splitProps, ValidComponent } from "solid-js";
 import { useSliderContext } from "./SliderContext";
 
 export interface SliderRailCommonProps<
@@ -14,31 +14,21 @@ export interface SliderRailProps<
   T extends ValidComponent | HTMLElement = HTMLElement,
 > extends SliderRailCommonProps<ElementOf<T>> {}
 
-const defaults = {
-  as: "div",
-} as const;
 export default function SliderRail<T extends ValidComponent>(
   props: PolymorphicProps<T, SliderRailProps<T>>,
 ) {
   const context = useSliderContext();
-  const merged = mergeProps(defaults, props);
-  const [local, rest] = splitProps(merged, [
-    "as",
-    "ref",
-    "children",
-    "onPointerDown",
-  ]);
+  const [local, rest] = splitProps(props, ["ref", "children", "onPointerDown"]);
 
-  const onPointerDown: SliderRailCommonProps["onPointerDown"] = (event) => {
+  const onPointerDown: SliderRailProps["onPointerDown"] = (event) => {
     context.beginSlide(event);
-    callHandler(event, local.onPointerDown);
   };
 
   return (
     <Polymorphic
-      as={local.as}
+      as="div"
       ref={mergeRefs(context.setRailRef, local.ref)}
-      onPointerDown={onPointerDown}
+      onPointerDown={composeHandlers(local.onPointerDown, onPointerDown)}
       {...rest}
     >
       {local.children}

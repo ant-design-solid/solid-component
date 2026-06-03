@@ -2,7 +2,7 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { callHandler, mergeStyle } from "@solid-component/utils";
+import { composeHandlers, mergeStyle } from "@solid-component/utils";
 import {
   batch,
   createEffect,
@@ -96,6 +96,11 @@ interface SliderRootCommonProps<
   | "onPointerCancel"
 > {}
 
+interface ExposeContext {
+  focus: VoidFunction;
+  blur: VoidFunction;
+}
+
 export interface SliderRootOwnProps<TValue extends SliderValue = number> {
   value?: TValue;
   defaultValue?: TValue;
@@ -110,6 +115,8 @@ export interface SliderRootOwnProps<TValue extends SliderValue = number> {
   vertical?: boolean;
   onChange?: (value: TValue) => void;
   onChangeEnd?: (value: TValue) => void;
+
+  expose?: (context: ExposeContext) => void;
 }
 
 export interface SliderRootElementProps<
@@ -125,7 +132,6 @@ export interface SliderRootProps<
   extends SliderRootOwnProps<TValue>, SliderRootCommonProps<ElementOf<T>> {}
 
 const defaults = {
-  as: "div",
   min: 0,
   max: 100,
   step: 1,
@@ -140,7 +146,6 @@ export default function SliderRoot<
 >(props: PolymorphicProps<T, SliderRootProps<T, TValue>>) {
   const merged = mergeProps(defaults, props as SliderRootProps<"div", TValue>);
   const [local, rest] = splitProps(merged, [
-    "as",
     "ref",
     "style",
     "value",
@@ -156,6 +161,8 @@ export default function SliderRoot<
     "vertical",
     "onChange",
     "onChangeEnd",
+    "expose",
+
     "onPointerDown",
     "onPointerMove",
     "onPointerUp",
@@ -363,6 +370,16 @@ export default function SliderRoot<
     return nearestId;
   };
 
+  local.expose?.({
+    focus: () => {
+      const firstId = orderedThumbs()[0].id;
+      setActiveThumb(firstId);
+    },
+    blur: () => {
+      setActiveThumb();
+    },
+  });
+
   const releasePointer = () => {
     if (
       activePointerId !== null &&
@@ -410,15 +427,13 @@ export default function SliderRoot<
     });
   };
 
-  const onPointerDown: typeof local.onPointerDown = (event) => {
+  const onPointerDown: SliderRootCommonProps["onPointerDown"] = (event) => {
     if (event.target === event.currentTarget && activePointerId === null) {
       beginSlide(event);
     }
-
-    callHandler(event, local.onPointerDown);
   };
 
-  const onPointerMove: typeof local.onPointerMove = (event) => {
+  const onPointerMove: SliderRootCommonProps["onPointerMove"] = (event) => {
     if (event.pointerId === activePointerId) {
       const rect = activeTrackRect ?? railRef()?.getBoundingClientRect();
       const percent = rect && getPointerPercent(event, rect, direction());
@@ -431,8 +446,6 @@ export default function SliderRoot<
         }
       }
     }
-
-    callHandler(event, local.onPointerMove);
   };
 
   const onPointerUp: typeof local.onPointerUp = (event) => {
@@ -441,8 +454,6 @@ export default function SliderRoot<
       releasePointer();
       setActiveThumb(undefined);
     }
-
-    callHandler(event, local.onPointerUp);
   };
 
   const onPointerCancel: typeof local.onPointerCancel = (event) => {
@@ -450,9 +461,17 @@ export default function SliderRoot<
       releasePointer();
       setActiveThumb(undefined);
     }
-
-    callHandler(event, local.onPointerCancel);
   };
+
+  const style = createMemo(() =>
+    mergeStyle(
+      {
+        position: "relative",
+        "touch-action": "none",
+      },
+      local.style,
+    ),
+  );
 
   const context = {
     step: () => local.step,
@@ -471,26 +490,16 @@ export default function SliderRoot<
     setRailRef,
   } satisfies SliderContextValue;
 
-  const style = createMemo(() =>
-    mergeStyle(
-      {
-        position: "relative",
-        "touch-action": "none",
-      },
-      local.style,
-    ),
-  );
-
   return (
     <SliderContext.Provider value={context}>
       <Polymorphic<SliderRootElementProps<ElementOf<T>>>
-        as={local.as}
+        as="div"
         role="group"
         style={style()}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
+        onPointerDown={composeHandlers(local.onPointerDown, onPointerDown)}
+        onPointerMove={composeHandlers(local.onPointerDown, onPointerMove)}
+        onPointerUp={composeHandlers(local.onPointerDown, onPointerUp)}
+        onPointerCancel={composeHandlers(local.onPointerDown, onPointerCancel)}
         {...rest}
       />
     </SliderContext.Provider>

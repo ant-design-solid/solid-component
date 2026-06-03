@@ -1,3 +1,4 @@
+import { error } from "@solid-component/utils";
 import { Accessor, createContext, useContext } from "solid-js";
 import { SliderDirection } from "./utils/direction";
 
@@ -35,9 +36,9 @@ export function useSliderContext() {
   const context = useContext(SliderContext);
 
   if (!context) {
-    throw new Error(
-      "[solid-component]: Slider components must be used within <Slider.Root>.",
-    );
+    error(`Slider components must be used within <Slider.Root>.`, {
+      package: "slider",
+    });
   }
 
   return context;

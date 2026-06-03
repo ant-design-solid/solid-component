@@ -6,9 +6,8 @@ import { mergeStyle } from "@solid-component/utils";
 import {
   createMemo,
   JSX,
-  mergeProps,
   splitProps,
-  ValidComponent,
+  ValidComponent
 } from "solid-js";
 import { useSliderContext } from "./SliderContext";
 import { getFillStyle } from "./utils/direction";
@@ -23,16 +22,11 @@ export interface SliderTrackProps<
 >
   extends SliderTrackOwnProps, SliderTrackCommonProps<ElementOf<T>> {}
 
-const defaults = {
-  as: "div",
-} as const;
-
 export default function SliderTrack<T extends ValidComponent>(
   props: PolymorphicProps<T, SliderTrackProps<T>>,
 ) {
   const context = useSliderContext();
-  const merged = mergeProps(defaults, props as SliderTrackProps);
-  const [local, rest] = splitProps(merged, ["as", "style"]);
+  const [local, rest] = splitProps(props as SliderTrackProps, ["style"]);
 
   const style = createMemo(() => {
     const values = context.values();
@@ -51,7 +45,5 @@ export default function SliderTrack<T extends ValidComponent>(
     );
   });
 
-  return (
-    <Polymorphic as={local.as} style={style()} aria-hidden="true" {...rest} />
-  );
+  return <Polymorphic as="div" style={style()} aria-hidden="true" {...rest} />;
 }
