@@ -1,0 +1,16 @@
+import Basic from "./basic.tsx";
+import BasicSource from "./basic.tsx?code";
+
+Menu renders non-modal navigation structures with selectable items and nested submenus. Submenus can
+own popup behavior internally, while the root menu stays focused on navigation state and keyboard
+movement.
+
+## Example
+
+<DemoCard
+  title="Basic menu"
+  description="Switch between inline, vertical popup, and horizontal menubar modes."
+  source={BasicSource}
+>
+  <Basic />
+</DemoCard>
