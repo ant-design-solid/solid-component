@@ -9,8 +9,8 @@ export interface FloatingMaskProps extends JSX.HTMLAttributes<HTMLElement> {
 }
 
 export default function FloatingMask(props: FloatingMaskProps) {
-  const context = useFloatingContext();
+  const { open } = useFloatingContext();
   const [local, rest] = splitProps(props, ["motion"]);
 
-  return <Motion visible={context.open()} {...local.motion} {...rest} />;
+  return <Motion visible={open()} {...local.motion} {...rest} />;
 }

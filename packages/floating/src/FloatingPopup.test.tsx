@@ -1,8 +1,8 @@
-import type { JSX } from 'solid-js'
+import type { Accessor, JSX } from 'solid-js'
 import { render } from 'solid-js/web'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { popup, reposition, repositionOrder, rootOptions } = vi.hoisted(() => {
+const { popup, reposition, repositionOrder, rootOptions, hasAction, useWinClick } = vi.hoisted(() => {
   const repositionOrder: string[] = []
   const reposition = vi.fn(async () => {
     repositionOrder.push('reposition')
@@ -15,12 +15,17 @@ const { popup, reposition, repositionOrder, rootOptions } = vi.hoisted(() => {
     popupAlign: undefined,
     stretch: undefined,
     forceRender: undefined as boolean | undefined,
+    closeOnClickOutside: undefined as boolean | undefined,
   }
+  const hasAction = vi.fn(() => false)
+  const useWinClick = vi.fn(() => vi.fn())
   return {
     popup: document.createElement('div'),
     reposition,
     repositionOrder,
     rootOptions,
+    hasAction,
+    useWinClick,
   }
 })
 
@@ -37,6 +42,10 @@ vi.mock('@solid-component/motion', () => ({
     lastMotionProps = props
     return null
   },
+}))
+
+vi.mock('./hooks/useWinClick', () => ({
+  default: useWinClick,
 }))
 
 vi.mock('./FloatingContext', () => ({
@@ -61,9 +70,10 @@ vi.mock('./FloatingContext', () => ({
       align: {},
     }),
     reposition,
-    hasAction: vi.fn(() => false),
+    hasAction,
     setPointerPoint: vi.fn(),
     rootOptions: () => rootOptions,
+    contains: vi.fn(() => false),
   }),
 }))
 
@@ -75,6 +85,10 @@ afterEach(() => {
   repositionOrder.length = 0
   reposition.mockClear()
   rootOptions.forceRender = undefined
+  rootOptions.closeOnClickOutside = undefined
+  hasAction.mockReset()
+  hasAction.mockReturnValue(false)
+  useWinClick.mockClear()
 })
 
 const mount = (view: () => JSX.Element) => {
@@ -131,5 +145,41 @@ describe('FloatingPopup', () => {
     expect(lastMotionProps?.removeOnLeave).toBe(false)
 
     dispose()
+  })
+
+  it('uses the existing outside-close behavior when closeOnClickOutside is unset', () => {
+    hasAction.mockImplementation(
+      (type: 'show' | 'hide', action: string) =>
+        type === 'hide' && action === 'contextmenu',
+    )
+
+    const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    const clickToHide = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
+
+    expect(clickToHide()).toBe(true)
+
+    dispose()
+  })
+
+  it('lets closeOnClickOutside override the derived outside-close behavior', () => {
+    hasAction.mockReturnValue(false)
+    rootOptions.closeOnClickOutside = true
+
+    const firstMount = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    const enabled = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
+    expect(enabled()).toBe(true)
+    firstMount.dispose()
+
+    useWinClick.mockClear()
+    rootOptions.closeOnClickOutside = false
+    hasAction.mockImplementation(
+      (type: 'show' | 'hide', action: string) =>
+        type === 'hide' && action === 'click',
+    )
+
+    const secondMount = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    const disabled = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
+    expect(disabled()).toBe(false)
+    secondMount.dispose()
   })
 })

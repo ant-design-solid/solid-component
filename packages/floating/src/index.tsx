@@ -1,4 +1,5 @@
-import { default as Arrow, type FloatingArrowProps } from './FloatingArrow'
+import Floating from "./Floating";
+import { default as Arrow, type FloatingArrowProps } from "./FloatingArrow";
 import {
   FloatingContext as Context,
   type FloatingAlign,
@@ -6,13 +7,21 @@ import {
   type FloatingMotionConfig,
   type FloatingPlacements,
   type FloatingPositionState,
-  useFloatingContext
-} from './FloatingContext'
-import { type FloatingMaskProps, default as Mask } from './FloatingMask'
-import { type FloatingPopupProps, default as Popup } from './FloatingPopup'
-import { type FloatingPortalProps, default as Portal } from './FloatingPortal'
-import { type FloatingRootOwnProps, type FloatingRootProps, default as Root } from './FloatingRoot'
-import { type FloatingTriggerOwnProps, type FloatingTriggerProps, default as Trigger } from './FloatingTrigger'
+  useFloatingContext,
+} from "./FloatingContext";
+import { type FloatingMaskProps, default as Mask } from "./FloatingMask";
+import { type FloatingPopupProps, default as Popup } from "./FloatingPopup";
+import { type FloatingPortalProps, default as Portal } from "./FloatingPortal";
+import {
+  type FloatingRootOwnProps,
+  type FloatingRootProps,
+  default as Root,
+} from "./FloatingRoot";
+import {
+  type FloatingTriggerOwnProps,
+  type FloatingTriggerProps,
+  default as Trigger,
+} from "./FloatingTrigger";
 
 export {
   Arrow as FloatingArrow,
@@ -30,19 +39,22 @@ export {
   type FloatingRootOwnProps,
   type FloatingRootProps,
   type FloatingTriggerOwnProps,
-  type FloatingTriggerProps
-}
-export type { FloatingAlign, FloatingContextValue, FloatingMotionConfig, FloatingPlacements, FloatingPositionState }
+  type FloatingTriggerProps,
+};
+export type {
+  FloatingAlign,
+  FloatingContextValue,
+  FloatingMotionConfig,
+  FloatingPlacements,
+  FloatingPositionState,
+};
 
-export default Object.assign(
-  {},
-  {
-    Root,
-    Trigger,
-    Popup,
-    Arrow,
-    Mask,
-    Portal,
-    Context,
-  },
-)
+export default Object.assign(Floating, {
+  Root,
+  Trigger,
+  Popup,
+  Arrow,
+  Mask,
+  Portal,
+  Context,
+});

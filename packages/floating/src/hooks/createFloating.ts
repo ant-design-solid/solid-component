@@ -13,7 +13,7 @@ import type {
   FloatingPlacements,
   FloatingPositionState,
 } from "../FloatingContext";
-import { collectScroller, getVisibleAreas, toNum } from "../utils";
+import { collectScroller, getVisibleAreas, getWin, toNum } from "../utils";
 
 type Rect = Record<"x" | "y" | "width" | "height", number>;
 type Points = [topBottom: "t" | "b" | "c", leftRight: "l" | "r" | "c"];
@@ -148,7 +148,8 @@ export default function createFloating(
     if (!popupElement || !targetValue || !open()) return false;
 
     const doc = popupElement.ownerDocument;
-    const win = doc.defaultView || (doc as any).parentWindow;
+    const win = getWin(popupElement);
+    if (!win) return false;
 
     const popupComputedStyle = win.getComputedStyle(popupElement);
     const { position: popupPosition } = popupComputedStyle;

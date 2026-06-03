@@ -1,3 +1,5 @@
+import { JSX } from "solid-js";
+
 type HandlerFn = (...args: any[]) => void;
 type EventHandler<E = Event> = (event: E) => void;
 
@@ -25,4 +27,14 @@ export function callHandler<H extends HandlerLike>(
   }
 
   return event?.defaultPrevented;
+}
+
+export function composeHandlers<T, E extends Event>(
+  ...handlers: (JSX.EventHandlerUnion<T, E> | undefined)[]
+) {
+  return (event: E) => {
+    for (const handler of handlers) {
+      callHandler(event as any, handler);
+    }
+  };
 }

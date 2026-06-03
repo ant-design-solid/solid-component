@@ -1,52 +1,83 @@
 import Motion from "@solid-component/motion";
-import { callHandler, mergeStyle } from "@solid-component/utils";
-import { createElementSize, makeEventListener, onClickOutside } from "@solid-primitive/web";
-import { createEffect, createMemo, splitProps, untrack } from "solid-js";
+import type { ElementOf, PolymorphicProps } from "@solid-component/polymorphic";
+import { composeHandlers, mergeRefs, mergeStyle } from "@solid-component/utils";
+import { createElementSize, makeEventListener } from "@solid-primitive/web";
+import {
+  createEffect,
+  createMemo,
+  splitProps,
+  untrack,
+  ValidComponent,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import type { FloatingMotionConfig } from "./FloatingContext";
 import { useFloatingContext } from "./FloatingContext";
 import useEscKeyDown from "./hooks/useEscKeyDown";
+import useWinClick from "./hooks/useWinClick";
 import { collectScroller, getWin } from "./utils";
 
-export interface FloatingPopupProps extends JSX.HTMLAttributes<HTMLDivElement> {
+interface FloatingPopupCommonProps<T extends HTMLElement> extends Pick<
+  JSX.HTMLAttributes<T>,
+  "ref" | "style" | "onMouseEnter" | "onMouseLeave" | "onPointerDown"
+> {}
+
+export interface FloatingPopupProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+> extends FloatingPopupCommonProps<ElementOf<T>> {
   zIndex?: number;
   motion?: FloatingMotionConfig;
 }
 
-export default function FloatingPopup(props: FloatingPopupProps) {
-  const context = useFloatingContext();
-  const [local, others] = splitProps(props, [
+export default function FloatingPopup<T extends ValidComponent>(
+  props: PolymorphicProps<T, FloatingPopupProps<T>>,
+) {
+  const {
+    open,
+    setOpen,
+    hasAction,
+    rootOptions,
+    triggerRef,
+    popupRef,
+    setPopupRef,
+    position,
+    reposition,
+    contains,
+  } = useFloatingContext();
+
+  const [local, others] = splitProps(props as FloatingPopupProps, [
     "ref",
-    "children",
     "zIndex",
     "style",
     "motion",
     "onMouseLeave",
     "onMouseEnter",
+    "onPointerDown",
   ]);
   const { size: triggerSize } = createElementSize(
-    createMemo(() => (context.rootOptions().stretch ? context.triggerRef() : null)),
+    createMemo(() => (rootOptions().stretch ? triggerRef() : null)),
     { controls: false },
   );
-  const { size: popupSize } = createElementSize(context.popupRef, { controls: false });
+  const { size: popupSize } = createElementSize(popupRef, {
+    controls: false,
+  });
 
   const motion = createMemo(() => {
     const motion = local.motion ?? {};
     return {
       ...motion,
       onAppearPrepare: async (...args) => {
-        await context.reposition();
+        await reposition();
         return motion.onAppearPrepare?.(...args);
       },
       onEnterPrepare: async (...args) => {
-        await context.reposition();
+        await reposition();
         return motion.onEnterPrepare?.(...args);
       },
       onVisibleChanged: (visible) => {
         motion.onVisibleChanged?.(visible);
         if (visible) {
           requestAnimationFrame(() => {
-            void context.reposition();
+            void reposition();
           });
         }
       },
@@ -54,9 +85,8 @@ export default function FloatingPopup(props: FloatingPopupProps) {
   });
 
   const popupStyle = createMemo<JSX.CSSProperties>(() => {
-    const positionState = context.position();
-    const open = context.open();
-    const stretch = context.rootOptions().stretch;
+    const positionState = position();
+    const stretch = rootOptions().stretch;
     const arrowStyle = {
       "--arrow-x": `${positionState.arrowX || 0}px`,
       "--arrow-y": `${positionState.arrowY || 0}px`,
@@ -78,7 +108,7 @@ export default function FloatingPopup(props: FloatingPopupProps) {
         miscStyle["min-width"] = `${width}px`;
       }
     }
-    if (!context.open()) {
+    if (!open()) {
       miscStyle["pointer-events"] = "none";
     }
 
@@ -89,7 +119,7 @@ export default function FloatingPopup(props: FloatingPopupProps) {
       right: AUTO,
       bottom: AUTO,
     };
-    if (positionState.ready || !open) {
+    if (positionState.ready || !open()) {
       const { points, dynamicInset } = positionState.align ?? {};
       const alignRight = dynamicInset && points?.[0][1] === "r";
       const alignBottom = dynamicInset && points?.[0][0] === "b";
@@ -123,40 +153,46 @@ export default function FloatingPopup(props: FloatingPopupProps) {
     );
   });
 
-  onClickOutside(
-    context.popupRef,
-    () => {
-      if (context.hasAction("hide", "click")) {
-        context.setOpen(false);
-      }
-    },
-    {
-      ignore: [context.triggerRef],
-    },
+  const onPopupPointerDown = useWinClick(
+    open,
+    createMemo(() => {
+      const closeOnClickOutside = rootOptions().closeOnClickOutside;
+
+      return (
+        closeOnClickOutside ??
+        (hasAction("hide", "click") || hasAction("hide", "contextmenu"))
+      );
+    }),
+    triggerRef,
+    popupRef,
+    contains,
+    (next) => setOpen(next),
   );
 
-  useEscKeyDown(context.open, (e) => {
+  useEscKeyDown(open, (e) => {
     if (e.inStackTop) {
-      context.setOpen(false);
+      setOpen(false);
     }
   });
 
   const scrollerList = createMemo(() => {
-    const triggerEle = context.triggerRef();
-    const popupEle = context.popupRef();
+    const triggerEle = triggerRef();
+    const popupEle = popupRef();
     if (!triggerEle || !popupEle) {
       return;
     }
+    const win = getWin(popupEle);
+    if (!win) return;
     const triggerScrollList = collectScroller(triggerEle);
     const popupScrollList = collectScroller(popupEle);
 
-    return [...new Set([getWin(popupEle)!, ...triggerScrollList, ...popupScrollList])];
+    return [...new Set([win, ...triggerScrollList, ...popupScrollList])];
   });
 
   const onScroll = () => {
-    void context.reposition();
-    if (context.open() && context.rootOptions().alignPoint && context.hasAction("hide", "click")) {
-      context.setOpen(false);
+    void reposition();
+    if (open() && rootOptions().alignPoint && hasAction("hide", "click")) {
+      setOpen(false);
     }
   };
 
@@ -170,52 +206,50 @@ export default function FloatingPopup(props: FloatingPopupProps) {
     }
 
     untrack(() => {
-      void context.reposition();
+      void reposition();
     });
   });
 
   createEffect(() => {
-    if (!context.open()) return;
+    if (!open()) return;
 
     popupSize();
 
     untrack(() => {
-      void context.reposition();
+      void reposition();
     });
   });
 
   const onMouseLeave: FloatingPopupProps["onMouseLeave"] = (event) => {
     const { relatedTarget } = event;
-    if (context.hasAction("hide", "hover") && !relatedTarget) {
-      context.setOpen(false);
-    }
-    callHandler(event, local.onMouseLeave);
+    if (!hasAction("hide", "hover")) return;
+    if (relatedTarget && contains(relatedTarget as Node)) return;
+
+    setOpen(false, rootOptions().delay.hoverClose);
   };
 
   const onMouseEnter: FloatingPopupProps["onMouseEnter"] = (e) => {
     if (
-      context.hasAction("show", "hover") &&
-      context.open() &&
-      context.popupRef()?.contains(e?.target)
+      hasAction("show", "hover") &&
+      open() &&
+      popupRef()?.contains(e?.target)
     ) {
-      context.setOpen(true);
+      setOpen(true, rootOptions().delay.hoverOpen);
     }
-    callHandler(e, local.onMouseEnter);
   };
 
   return (
     <Motion
-      visible={context.open()}
-      forceRender={context.rootOptions().forceRender}
-      removeOnLeave={!context.rootOptions().forceRender}
-      ref={context.setPopupRef}
+      visible={open()}
+      forceRender={rootOptions().forceRender}
+      removeOnLeave={!rootOptions().forceRender}
+      ref={mergeRefs(local.ref, setPopupRef)}
       style={popupStyle()}
-      onMouseLeave={onMouseLeave}
-      onMouseEnter={onMouseEnter}
+      onMouseLeave={composeHandlers(local.onMouseLeave, onMouseLeave)}
+      onMouseEnter={composeHandlers(local.onMouseEnter, onMouseEnter)}
+      onPointerDown={composeHandlers(local.onPointerDown, onPopupPointerDown)}
       {...motion()}
-      {...(others as Record<string, unknown>)}
-    >
-      {local.children}
-    </Motion>
+      {...others}
+    />
   );
 }

@@ -1,102 +1,130 @@
 export function getWin(ele: HTMLElement) {
-  return ele.ownerDocument.defaultView
+  return ele.ownerDocument.defaultView;
 }
 
 export function collectScroller(ele: HTMLElement) {
-  const scrollerList: HTMLElement[] = []
-  let current = ele?.parentElement
+  const scrollerList: HTMLElement[] = [];
+  let current = ele?.parentElement;
 
-  const scrollStyle = ['hidden', 'scroll', 'clip', 'auto']
+  const scrollStyle = ["hidden", "scroll", "clip", "auto"];
 
   while (current) {
-    const { overflowX, overflowY, overflow } = getWin(current)!.getComputedStyle(current)
-    if ([overflowX, overflowY, overflow].some(o => scrollStyle.includes(o))) {
-      scrollerList.push(current)
+    const win = getWin(current);
+    if (!win) {
+      break;
+    }
+    const { overflowX, overflowY, overflow } = win.getComputedStyle(current);
+    if ([overflowX, overflowY, overflow].some((o) => scrollStyle.includes(o))) {
+      scrollerList.push(current);
     }
 
-    current = current.parentElement
+    current = current.parentElement;
   }
 
-  return scrollerList
+  return scrollerList;
 }
 
 export function toNum(num: number, defaultValue = 1) {
-  return Number.isNaN(num) ? defaultValue : num
+  return Number.isNaN(num) ? defaultValue : num;
 }
 
 function getPxValue(val: string) {
-  return toNum(parseFloat(val), 0)
+  return toNum(parseFloat(val), 0);
 }
 
 export interface VisibleArea {
-  left: number
-  top: number
-  right: number
-  bottom: number
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
 
 function getScrollerClip(ele: HTMLElement): VisibleArea | null {
-  if (ele instanceof HTMLBodyElement || ele instanceof HTMLHtmlElement) return null
+  if (ele instanceof HTMLBodyElement || ele instanceof HTMLHtmlElement)
+    return null;
 
-  const { overflow, overflowClipMargin, borderTopWidth, borderBottomWidth, borderLeftWidth, borderRightWidth } =
-    getWin(ele)!.getComputedStyle(ele)
+  const {
+    overflow,
+    overflowClipMargin,
+    borderTopWidth,
+    borderBottomWidth,
+    borderLeftWidth,
+    borderRightWidth,
+  } = getWin(ele)!.getComputedStyle(ele);
 
-  const eleRect = ele.getBoundingClientRect()
+  const eleRect = ele.getBoundingClientRect();
   const {
     offsetHeight: eleOutHeight,
     clientHeight: eleInnerHeight,
     offsetWidth: eleOutWidth,
     clientWidth: eleInnerWidth,
-  } = ele
+  } = ele;
 
-  const borderTopNum = getPxValue(borderTopWidth)
-  const borderBottomNum = getPxValue(borderBottomWidth)
-  const borderLeftNum = getPxValue(borderLeftWidth)
-  const borderRightNum = getPxValue(borderRightWidth)
+  const borderTopNum = getPxValue(borderTopWidth);
+  const borderBottomNum = getPxValue(borderBottomWidth);
+  const borderLeftNum = getPxValue(borderLeftWidth);
+  const borderRightNum = getPxValue(borderRightWidth);
 
-  const scaleX = toNum(Math.round((eleRect.width / eleOutWidth) * 1000) / 1000)
-  const scaleY = toNum(Math.round((eleRect.height / eleOutHeight) * 1000) / 1000)
+  const scaleX = toNum(Math.round((eleRect.width / eleOutWidth) * 1000) / 1000);
+  const scaleY = toNum(
+    Math.round((eleRect.height / eleOutHeight) * 1000) / 1000,
+  );
 
-  const eleScrollWidth = (eleOutWidth - eleInnerWidth - borderLeftNum - borderRightNum) * scaleX
-  const eleScrollHeight = (eleOutHeight - eleInnerHeight - borderTopNum - borderBottomNum) * scaleY
+  const eleScrollWidth =
+    (eleOutWidth - eleInnerWidth - borderLeftNum - borderRightNum) * scaleX;
+  const eleScrollHeight =
+    (eleOutHeight - eleInnerHeight - borderTopNum - borderBottomNum) * scaleY;
 
-  const scaledBorderTopWidth = borderTopNum * scaleY
-  const scaledBorderBottomWidth = borderBottomNum * scaleY
-  const scaledBorderLeftWidth = borderLeftNum * scaleX
-  const scaledBorderRightWidth = borderRightNum * scaleX
+  const scaledBorderTopWidth = borderTopNum * scaleY;
+  const scaledBorderBottomWidth = borderBottomNum * scaleY;
+  const scaledBorderLeftWidth = borderLeftNum * scaleX;
+  const scaledBorderRightWidth = borderRightNum * scaleX;
 
-  let clipMarginWidth = 0
-  let clipMarginHeight = 0
-  if (overflow === 'clip') {
-    const clipNum = getPxValue(overflowClipMargin)
-    clipMarginWidth = clipNum * scaleX
-    clipMarginHeight = clipNum * scaleY
+  let clipMarginWidth = 0;
+  let clipMarginHeight = 0;
+  if (overflow === "clip") {
+    const clipNum = getPxValue(overflowClipMargin);
+    clipMarginWidth = clipNum * scaleX;
+    clipMarginHeight = clipNum * scaleY;
   }
 
   return {
     left: eleRect.x + scaledBorderLeftWidth - clipMarginWidth,
     top: eleRect.y + scaledBorderTopWidth - clipMarginHeight,
-    right: eleRect.x + eleRect.width + clipMarginWidth - scaledBorderRightWidth - eleScrollWidth,
-    bottom: eleRect.y + eleRect.height + clipMarginHeight - scaledBorderBottomWidth - eleScrollHeight,
-  }
+    right:
+      eleRect.x +
+      eleRect.width +
+      clipMarginWidth -
+      scaledBorderRightWidth -
+      eleScrollWidth,
+    bottom:
+      eleRect.y +
+      eleRect.height +
+      clipMarginHeight -
+      scaledBorderBottomWidth -
+      eleScrollHeight,
+  };
 }
 
 function applyScrollerClip(area: VisibleArea, clip: VisibleArea) {
-  area.left = Math.max(area.left, clip.left)
-  area.top = Math.max(area.top, clip.top)
-  area.right = Math.min(area.right, clip.right)
-  area.bottom = Math.min(area.bottom, clip.bottom)
+  area.left = Math.max(area.left, clip.left);
+  area.top = Math.max(area.top, clip.top);
+  area.right = Math.min(area.right, clip.right);
+  area.bottom = Math.min(area.bottom, clip.bottom);
 }
 
-export function getVisibleAreas(areas: VisibleArea[], scrollerList?: HTMLElement[]): VisibleArea[] {
-  areas = areas.map(area => ({ ...area }))
-  ;(scrollerList || []).forEach(ele => {
-    const clip = getScrollerClip(ele)
+export function getVisibleAreas(
+  areas: VisibleArea[],
+  scrollerList?: HTMLElement[],
+): VisibleArea[] {
+  areas = areas.map((area) => ({ ...area }));
+  (scrollerList || []).forEach((ele) => {
+    const clip = getScrollerClip(ele);
     if (clip) {
-      areas.forEach(area => {
-        applyScrollerClip(area, clip)
-      })
+      areas.forEach((area) => {
+        applyScrollerClip(area, clip);
+      });
     }
-  })
-  return areas
+  });
+  return areas;
 }

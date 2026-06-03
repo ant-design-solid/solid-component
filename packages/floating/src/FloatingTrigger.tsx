@@ -1,132 +1,146 @@
-import { mergeProps, splitProps, type JSX, type ValidComponent } from 'solid-js'
-import type { ElementOf, PolymorphicProps } from '@solid-component/polymorphic'
-import { Polymorphic } from '@solid-component/polymorphic'
-import { callHandler, mergeRefs } from '@solid-component/utils'
-import { useFloatingContext } from './FloatingContext'
-import { ValueOf } from '@solid-primitive/shared'
+import type { ElementOf, PolymorphicProps } from "@solid-component/polymorphic";
+import { Polymorphic } from "@solid-component/polymorphic";
+import {
+  callHandler,
+  composeHandlers,
+  mergeRefs,
+} from "@solid-component/utils";
+import { ValueOf } from "@solid-primitive/shared";
+import { splitProps, type JSX, type ValidComponent } from "solid-js";
+import { useFloatingContext } from "./FloatingContext";
 
-const HANDLERS = [
-  'onClick',
-  'onTouchStart',
-  'onPointerEnter',
-  'onPointerDown',
-  'onPointerLeave',
-  'onFocus',
-  'onBlur',
-  'onContextMenu',
-] as const
+const COMMON_PROPS = [
+  "ref",
+  "onClick",
+  "onTouchStart",
+  "onPointerEnter",
+  "onPointerDown",
+  "onPointerLeave",
+  "onFocus",
+  "onBlur",
+  "onContextMenu",
+] as const;
 
-export interface FloatingTriggerOwnProps<T extends HTMLElement = HTMLElement> extends Pick<
-  JSX.HTMLAttributes<T>,
-  ValueOf<typeof HANDLERS>
-> {
-  ref: T | ((el: T) => void)
-}
+export interface FloatingTriggerOwnProps {}
 
-type FloatingTriggerElementProps<T extends HTMLElement = HTMLElement> = FloatingTriggerOwnProps<T> & {
-  'aria-expanded': boolean
-  'aria-controls': string | undefined
-}
+export interface FloatingTriggerCommonProps<
+  T extends HTMLElement = HTMLElement,
+> extends Pick<JSX.HTMLAttributes<T>, ValueOf<typeof COMMON_PROPS>> {}
 
-export type FloatingTriggerProps<T extends ValidComponent | HTMLElement = HTMLElement> =
-  Partial<FloatingTriggerOwnProps<ElementOf<T>>>
+type FloatingTriggerElementProps<T extends HTMLElement = HTMLElement> =
+  FloatingTriggerCommonProps<T> & {
+    "aria-expanded": boolean;
+    "aria-controls": string | undefined;
+  };
 
-export default function FloatingTrigger<T extends ValidComponent>(props: PolymorphicProps<T, FloatingTriggerProps<T>>) {
-  const merged = mergeProps({ as: 'button' } as const, props as FloatingTriggerProps)
-  const [local, others] = splitProps(merged, ["as", "ref", ...HANDLERS]);
-  const context = useFloatingContext()
-  const onPointerEnter: FloatingTriggerOwnProps['onPointerEnter'] = e => {
-    if (e.pointerType === 'mouse' && context.hasAction('show', 'hover')) {
-      context.setPointerPoint(e.clientX, e.clientY)
-      context.setOpen(true)
+export interface FloatingTriggerProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+>
+  extends FloatingTriggerOwnProps, FloatingTriggerCommonProps<ElementOf<T>> {}
+
+export default function FloatingTrigger<T extends ValidComponent>(
+  props: PolymorphicProps<T, FloatingTriggerProps<T>>,
+) {
+  const {
+    id,
+    hasAction,
+    setPointerPoint,
+    setOpen,
+    open,
+    reposition,
+    setTriggerRef,
+    rootOptions,
+  } = useFloatingContext();
+
+  const [local, others] = splitProps(
+    props as FloatingTriggerProps,
+    COMMON_PROPS,
+  );
+  const onPointerEnter: FloatingTriggerProps["onPointerEnter"] = (e) => {
+    if (e.pointerType === "mouse" && hasAction("show", "hover")) {
+      setPointerPoint(e.clientX, e.clientY);
+      setOpen(true, rootOptions().delay.hoverOpen);
     }
-    callHandler(e, local.onPointerEnter)
-  }
+  };
 
-  const onPointerLeave: FloatingTriggerOwnProps['onPointerLeave'] = e => {
-    if (e.pointerType === 'mouse' && context.hasAction('hide', 'hover')) {
-      context.setOpen(false)
+  const onPointerLeave: FloatingTriggerCommonProps["onPointerLeave"] = (e) => {
+    if (e.pointerType === "mouse" && hasAction("hide", "hover")) {
+      setOpen(false, rootOptions().delay.hoverClose);
     }
-    callHandler(e, local.onPointerLeave)
-  }
+  };
 
-  const onClick: FloatingTriggerOwnProps['onClick'] = e => {
-    const clickToShow = context.hasAction('show', 'click')
-    const clickToHide = context.hasAction('hide', 'click')
+  const onClick: FloatingTriggerCommonProps["onClick"] = (e) => {
+    const clickToShow = hasAction("show", "click");
+    const clickToHide = hasAction("hide", "click");
     if (clickToShow || clickToHide) {
-      const open = context.open()
-      if (open && clickToHide) {
-        context.setOpen(false)
-      } else if (!open && clickToShow) {
-        context.setPointerPoint(e.clientX, e.clientY)
-        context.setOpen(true)
+      const opened = open();
+      if (opened && clickToHide) {
+        setOpen(false);
+      } else if (!opened && clickToShow) {
+        setPointerPoint(e.clientX, e.clientY);
+        setOpen(true);
       }
     }
-    callHandler(e, local.onClick)
-  }
+    callHandler(e, local.onClick);
+  };
 
-  const onTouchStart: FloatingTriggerOwnProps['onTouchStart'] = e => {
-    const touchToShow = context.hasAction('show', 'touch')
-    const touchToHide = context.hasAction('hide', 'touch')
+  const onTouchStart: FloatingTriggerProps["onTouchStart"] = (e) => {
+    const touchToShow = hasAction("show", "touch");
+    const touchToHide = hasAction("hide", "touch");
     if (touchToShow || touchToHide) {
-      if (context.open() && touchToHide) {
-        context.setOpen(false)
-      } else if (!context.open() && touchToShow) {
-        context.setOpen(true)
+      if (open() && touchToHide) {
+        setOpen(false);
+      } else if (!open() && touchToShow) {
+        setOpen(true);
       }
     }
-    callHandler(e, local.onTouchStart)
-  }
+  };
 
-  const onPointerDown: FloatingTriggerOwnProps['onPointerDown'] = e => {
-    if (!context.open()) {
-      void context.reposition()
+  const onPointerDown: FloatingTriggerProps["onPointerDown"] = (e) => {
+    if (!open()) {
+      void reposition();
     }
-    callHandler(e, local.onPointerDown)
-  }
+  };
 
-  const onFocus: FloatingTriggerOwnProps['onFocus'] = e => {
-    if (context.hasAction('show', 'focus')) {
-      context.setOpen(true)
+  const onFocus: FloatingTriggerProps["onFocus"] = (e) => {
+    if (hasAction("show", "focus")) {
+      setOpen(true, rootOptions().delay.focusOpen);
     }
-    callHandler(e, local.onFocus)
-  }
-  const onBlur: FloatingTriggerOwnProps['onBlur'] = e => {
-    if (context.hasAction('hide', 'focus')) {
-      context.setOpen(false)
+  };
+  const onBlur: FloatingTriggerProps["onBlur"] = (e) => {
+    if (hasAction("hide", "focus")) {
+      setOpen(false, rootOptions().delay.focusClose);
     }
-    callHandler(e, local.onBlur)
-  }
+  };
 
-  const onContextMenu: FloatingTriggerOwnProps['onContextMenu'] = e => {
-    if (context.hasAction('show', 'contextmenu')) {
-      if (context.open() && context.hasAction('hide', 'contextmenu')) {
-        context.setOpen(false)
+  const onContextMenu: FloatingTriggerProps["onContextMenu"] = (e) => {
+    if (hasAction("show", "contextmenu")) {
+      if (open() && hasAction("hide", "contextmenu")) {
+        setOpen(false);
       } else {
-        context.setPointerPoint(e.clientX, e.clientY)
-        context.setOpen(true)
+        setPointerPoint(e.clientX, e.clientY);
+        setOpen(true);
       }
 
-      e.preventDefault()
+      e.preventDefault();
     }
-    callHandler(e, local.onContextMenu)
-  }
+  };
 
   return (
     <Polymorphic<FloatingTriggerElementProps<ElementOf<T>>>
-      as={local.as}
-      ref={mergeRefs(local.ref, context.setTriggerRef)}
+      as="button"
+      ref={mergeRefs(local.ref, setTriggerRef)}
       onClick={onClick}
-      onPointerDown={onPointerDown}
-      onTouchStart={onTouchStart}
-      onPointerEnter={onPointerEnter}
-      onPointerLeave={onPointerLeave}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      onContextMenu={onContextMenu}
-      aria-expanded={context.open()}
-      aria-controls={context.open() ? context.id : undefined}
+      onPointerDown={composeHandlers(local.onPointerDown, onPointerDown)}
+      onTouchStart={composeHandlers(local.onTouchStart, onTouchStart)}
+      onPointerEnter={composeHandlers(local.onPointerEnter, onPointerEnter)}
+      onPointerLeave={composeHandlers(local.onPointerLeave, onPointerLeave)}
+      onFocus={composeHandlers(local.onFocus, onFocus)}
+      onBlur={composeHandlers(local.onBlur, onBlur)}
+      onContextMenu={composeHandlers(local.onContextMenu, onContextMenu)}
+      aria-expanded={open()}
+      aria-controls={open() ? id : undefined}
       {...others}
     />
-  )
+  );
 }
