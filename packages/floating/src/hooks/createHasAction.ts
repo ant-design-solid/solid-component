@@ -1,4 +1,4 @@
-import { access, createCollection } from "@solid-primitive/shared";
+import { access, createCollection, toArray } from "@solid-primitive/shared";
 import { Accessor, batch, createEffect } from "solid-js";
 
 export type ActionType = "hover" | "focus" | "click" | "contextMenu";
@@ -12,9 +12,8 @@ type ExternalActionType =
 
 type ActionTypes = ExternalActionType | ExternalActionType[];
 
-function toArray<T>(val?: T | T[]) {
-  return val ? (Array.isArray(val) ? val : [val]) : [];
-}
+export type HasAction = ReturnType<typeof createHasAction>
+
 
 function normalizeAction(action: ExternalActionType): NormalizedActionType {
   if (typeof action === "string") {

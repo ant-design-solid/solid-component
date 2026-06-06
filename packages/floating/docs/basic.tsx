@@ -1,3 +1,4 @@
+import { Portal } from "solid-js/web";
 import Floating from "../src";
 import "./style.css";
 
@@ -40,7 +41,7 @@ export default function BasicDemo() {
           Toggle popup
         </Floating.Trigger>
 
-        <Floating.Portal>
+        <Portal>
           <Floating.Popup
             style={{
               width: "240px",
@@ -69,7 +70,7 @@ export default function BasicDemo() {
               />
             </Floating.Arrow>
           </Floating.Popup>
-        </Floating.Portal>
+        </Portal>
       </Floating.Root>
     </div>
   );

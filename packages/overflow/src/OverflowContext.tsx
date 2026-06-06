@@ -1,46 +1,41 @@
-import { MaybeElement, type Batcher } from "@solid-primitive/shared";
+import { error } from "@solid-component/utils";
 import { createContext, useContext, type Accessor } from "solid-js";
-
-export type OverflowItemUid = symbol;
-export type OverflowItemKey = string | number;
-export type OverflowItemRole = "item" | "rest" | "prefix" | "suffix";
-export type OverflowCollapse = "start" | "end";
-export type OverflowVisibleRange = readonly [start: number, end: number];
-
-export interface OverflowItemRecord {
-  uid: OverflowItemUid;
-  key?: OverflowItemKey;
-  role: OverflowItemRole;
-  el: Accessor<MaybeElement>;
-  order: Accessor<number>;
-  width: Accessor<number | null>;
-}
-
-export type RegisterOverflowItemOptions = OverflowItemRecord;
+import type {
+  OverflowCollapse,
+  OverflowItemKey,
+  OverflowItemRecord,
+  OverflowItemUid,
+  OverflowChangeInfo,
+  OverflowVisibleRange,
+} from "./types";
 
 export interface OverflowContextValue {
-  batcher: Batcher;
-
   responsive: Accessor<boolean>;
   invalidate: Accessor<boolean>;
+  measuring: Accessor<boolean>;
   collapse: Accessor<OverflowCollapse>;
-  containerWidth: Accessor<number | undefined>;
 
-  renderRest: Accessor<boolean>;
+  showRest: Accessor<boolean>;
   shouldExpand: Accessor<boolean>;
+  previewCount: Accessor<number | null>;
+  previewRange: Accessor<OverflowVisibleRange | null>;
 
   sourceCount: Accessor<number>;
   setSourceCount(count: number | null): void;
 
   visibleRange: Accessor<OverflowVisibleRange>;
-  omittedCount: Accessor<number>;
-  suffixInsetStart: Accessor<number | null>;
+  changeInfo: Accessor<OverflowChangeInfo>;
 
-  registerItem(options: RegisterOverflowItemOptions): void;
+  suffixInsetStart: Accessor<number | null>;
+  setPrefixWidth(width: number | null): void;
+  setRestWidth(width: number | null): void;
+  setSuffixWidth(width: number | null): void;
+
+  registerItem(options: OverflowItemRecord): void;
   unregisterItem(id: OverflowItemUid): void;
 
-  getItemWidth(uid: OverflowItemUid): number | null;
-  getItemWidth(record: OverflowItemRecord): number | null;
+  getItemOrder(uid: OverflowItemUid): number | undefined;
+  getItemOrder(record: OverflowItemRecord): number | undefined;
 }
 
 export const OverflowContext = createContext<OverflowContextValue>();
@@ -49,9 +44,9 @@ export function useOverflowContext() {
   const context = useContext(OverflowContext);
 
   if (!context) {
-    throw new Error(
-      "[diagen]: Overflow components must be used within <Overflow.Root>.",
-    );
+    error("Overflow components must be used within <Overflow.Root>.", {
+      package: "overflow",
+    });
   }
 
   return context;
@@ -59,8 +54,7 @@ export function useOverflowContext() {
 
 export interface OverflowItemContextValue {
   key?: OverflowItemKey;
-  role: OverflowItemRole;
-  order: Accessor<number>;
+  index: Accessor<number>;
 }
 
 export const OverflowItemContext =

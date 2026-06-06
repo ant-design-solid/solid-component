@@ -2,132 +2,193 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { mergeRefs } from "@solid-component/utils";
-import { createBatcher, createCollection } from "@solid-primitive/shared";
+import {
+  createOrderedRegistry,
+  makeRaf,
+  mergeRefs,
+} from "@solid-component/utils";
 import { createResizeObserver } from "@solid-primitive/web";
 import {
   batch,
   createEffect,
   createMemo,
   createSignal,
+  JSX,
   mergeProps,
-  onMount,
+  onCleanup,
   splitProps,
   ValidComponent,
 } from "solid-js";
-import {
+import { OverflowContext, OverflowContextValue } from "./OverflowContext";
+import type {
+  OverflowChangeInfo,
   OverflowCollapse,
+  OverflowItemKey,
   OverflowItemRecord,
-  OverflowItemUid,
-  OverflowContext,
-  OverflowContextValue,
   OverflowVisibleRange,
-  RegisterOverflowItemOptions,
-} from "./OverflowContext";
-import { PREFIX_UID } from "./OverflowPrefix";
-import { REST_UID } from "./OverflowRest";
-import { SUFFIX_UID } from "./OverflowSuffix";
+} from "./types";
 
 const RESPONSIVE = "responsive" as const;
 const INVALIDATE = "invalidate" as const;
 
-export interface OverflowRootOwnProps<T extends HTMLElement = HTMLElement> {
+export type OverflowPreview =
+  | { count: number; itemWidth?: never }
+  | { itemWidth: number; count?: never };
+
+export interface OverflowRootOwnProps {
   maxCount?: number | typeof RESPONSIVE | typeof INVALIDATE;
   collapse?: OverflowCollapse;
-  ref: T | ((el: T) => void);
-  onVisibleChange?: (count: number) => void;
+  preview?: OverflowPreview;
+  onOverflowChange?: (info: OverflowChangeInfo) => void;
 }
 
-export type OverflowRootProps<
+interface OverflowRootCommonProps<T extends HTMLElement> extends Pick<
+  JSX.HTMLAttributes<T>,
+  "ref"
+> {}
+
+export interface OverflowRootProps<
   T extends ValidComponent | HTMLElement = HTMLElement,
-> = Partial<OverflowRootOwnProps<ElementOf<T>>>;
+>
+  extends OverflowRootOwnProps, OverflowRootCommonProps<ElementOf<T>> {}
+
+function valuesEqual(a: readonly any[], b: readonly any[]) {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
 
 const defaults = {
-  as: "div",
   collapse: "end",
 } as const;
-
 export default function OverflowRoot<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowRootProps<T>>,
 ) {
-  const batcher = createBatcher({
-    schedule: "microtask",
-  });
   const merged = mergeProps(defaults, props as OverflowRootProps);
   const [local, rest] = splitProps(merged, [
-    "as",
     "ref",
     "maxCount",
     "collapse",
-    "onVisibleChange",
+    "preview",
+    "onOverflowChange",
   ]);
   const [containerWidth, setContainerWidth] = createSignal<number>();
-  const itemRecords = createCollection(
-    new Map<OverflowItemUid, OverflowItemRecord>(),
-  );
+  const [rootRef, setRootRef] = createSignal<HTMLElement>();
+  const { register, unregister, ordered, getOrder } =
+    createOrderedRegistry<OverflowItemRecord>({
+      rootRef,
+      package: "overflow",
+    });
+
   const [sourceCountOverride, setSourceCountOverride] = createSignal<
     number | null
   >(null);
+  const [ready, setReady] = createSignal(false);
+  const [measuredOnce, setMeasuredOnce] = createSignal(false);
   const [visibleRange, setVisibleRange] = createSignal<OverflowVisibleRange>([
     0, 0,
   ]);
   const [suffixInsetStart, setSuffixInsetStart] = createSignal<number | null>(
     null,
   );
+  const [prefixWidth, setPrefixWidth] = createSignal<number | null>(null);
+  const [restWidth, setRestWidth] = createSignal<number | null>(null);
+  const [suffixWidth, setSuffixWidth] = createSignal<number | null>(null);
 
-  const [rootRef, setRootRef] = createSignal<HTMLElement>();
-
-  const renderedItems = createMemo(() =>
-    Array.from(itemRecords.values())
-      .filter((record) => record.role === "item")
-      .sort((a, b) => a.order() - b.order()),
-  );
   const sourceCount = createMemo(
-    () => sourceCountOverride() ?? renderedItems().length,
+    () => sourceCountOverride() ?? ordered().length,
   );
-
-  const restRecord = createMemo(() => itemRecords.get(REST_UID));
-  const measuredRestWidth = createMemo(() => restRecord()?.width() ?? null);
-  const restWidth = createMemo(() => measuredRestWidth() ?? 0);
-  const prefixRecord = createMemo(() => itemRecords.get(PREFIX_UID));
-  const prefixWidth = createMemo(() => prefixRecord()?.width() ?? 0);
-  const suffixRecord = createMemo(() => itemRecords.get(SUFFIX_UID));
-  const suffixWidth = createMemo(() => suffixRecord()?.width() ?? 0);
-
-  const [stableRestWidth, setStableRestWidth] = createSignal(0);
-
-  createEffect(() => {
-    const next = restWidth();
-    setStableRestWidth(renderRest() ? next : 0);
-  });
 
   const isResponsive = createMemo(() => local.maxCount === RESPONSIVE);
   const shouldResponsive = createMemo(
-    () => !!itemRecords.size && isResponsive(),
+    () => ordered().length > 0 && isResponsive(),
   );
   const isInvalidate = createMemo(() => local.maxCount === INVALIDATE);
   const collapse = createMemo(() => local.collapse);
-  const renderRest = createMemo(
+  const isStartCollapse = () => collapse() === "start";
+  const showRest = createMemo(
     () =>
       isResponsive() ||
       (typeof local.maxCount === "number" && sourceCount() > local.maxCount),
   );
+  const effectiveRestWidth = createMemo(() =>
+    showRest() ? (restWidth() ?? 0) : 0,
+  );
+  const measuring = createMemo(() => !ready() && !measuredOnce());
+  const previewCount = createMemo(() => {
+    if (!isResponsive()) {
+      return null;
+    }
 
-  createResizeObserver(rootRef, ([entry]) => {
-    const { clientWidth } = entry.target;
-    void batcher.submit(() => {
-      setContainerWidth(clientWidth);
-    });
+    const preview = local.preview;
+
+    if (!preview) {
+      return null;
+    }
+
+    if (preview.count != null) {
+      return Math.max(1, Math.floor(preview.count));
+    }
+
+    const container = containerWidth();
+    if (preview.itemWidth <= 0 || !container) {
+      return null;
+    }
+
+    return Math.max(1, Math.floor(container / preview.itemWidth));
   });
+  const previewRange = createMemo<OverflowVisibleRange | null>(() => {
+    if (!measuring()) {
+      return null;
+    }
+
+    const count = previewCount();
+    const items = ordered();
+
+    if (count == null || !items.length) {
+      return null;
+    }
+
+    const lastIndex = items.length - 1;
+    const firstOrder = getOrder(items[0])!;
+    const lastOrder = getOrder(items[lastIndex])!;
+
+    if (count >= items.length) {
+      return [firstOrder, lastOrder];
+    }
+
+    if (isStartCollapse()) {
+      return [getOrder(items[items.length - count])!, lastOrder];
+    }
+
+    return [firstOrder, getOrder(items[count - 1])!];
+  });
+  const isReady = createMemo(
+    () =>
+      ordered().every((record) => record.width() != null) &&
+      (!showRest() || restWidth() != null),
+  );
+
+  createEffect(() => {
+    if (ready() && (!isResponsive() || ordered().length > 0)) {
+      setMeasuredOnce(true);
+    }
+  });
+
+  const [raf, cancelRaf] = makeRaf();
+  createResizeObserver(
+    () => (isInvalidate() ? undefined : rootRef()),
+    ([entry]) => {
+      const { clientWidth } = entry.target;
+      raf(() => {
+        setContainerWidth(clientWidth);
+      });
+    },
+  );
+
+  onCleanup(cancelRaf);
 
   createEffect(() => {
     const el = rootRef();
     el && setContainerWidth(el.clientWidth);
-  });
-
-  const omittedCount = createMemo(() => {
-    const [start, end] = visibleRange();
-    return Math.max(sourceCount() - Math.max(end - start + 1, 0), 0);
   });
 
   const shouldExpand = createMemo(() => {
@@ -135,7 +196,7 @@ export default function OverflowRoot<T extends ValidComponent>(
       return false;
     }
 
-    const items = renderedItems();
+    const items = ordered();
     if (!items.length) {
       return false;
     }
@@ -151,32 +212,12 @@ export default function OverflowRoot<T extends ValidComponent>(
 
     const [start, end] = visibleRange();
 
-    if (collapse() === "start") {
-      return start <= items[0].order();
+    if (isStartCollapse()) {
+      return start <= getOrder(items[0])!;
     }
 
-    return end >= items[items.length - 1].order();
+    return end >= getOrder(items[items.length - 1])!;
   });
-
-  const registerItem = (options: RegisterOverflowItemOptions) => {
-    itemRecords.set(options.uid, options);
-  };
-
-  const unregisterItem = (uid: OverflowItemUid) => {
-    itemRecords.delete(uid);
-  };
-
-  const getItemWidth = (val: OverflowItemUid | OverflowItemRecord) => {
-    let record: OverflowItemRecord | undefined;
-    if (typeof val === "symbol") {
-      record = itemRecords.get(val);
-    } else if (typeof val === "object") {
-      record = val;
-    }
-    if (!record) return null;
-
-    return record.width();
-  };
 
   const setSourceCount = (count: number | null) => {
     setSourceCountOverride(count);
@@ -193,72 +234,133 @@ export default function OverflowRoot<T extends ValidComponent>(
     return Number.isFinite(gap) ? gap : 0;
   };
 
-  const commitVisibleRange = (
-    range: OverflowVisibleRange,
-    visibleCount?: number,
-  ) => {
-    setVisibleRange(range);
-    if (visibleCount != null) {
-      local.onVisibleChange?.(visibleCount);
+  const changeInfo = createMemo<OverflowChangeInfo>(() => {
+    const [start, end] = visibleRange();
+    const visibleKeys: OverflowItemKey[] = [];
+    const omittedKeys: OverflowItemKey[] = [];
+
+    for (const item of ordered()) {
+      const itemKey = item.key;
+
+      if (itemKey === undefined) {
+        continue;
+      }
+
+      const order = getOrder(item)!;
+      if (order >= start && order <= end) {
+        visibleKeys.push(itemKey);
+      } else {
+        omittedKeys.push(itemKey);
+      }
     }
-  };
+
+    return {
+      visibleKeys,
+      omittedKeys,
+      omittedCount: Math.max(sourceCount() - Math.max(end - start + 1, 0), 0),
+    };
+  });
+
+  let previousOverflowChange: OverflowChangeInfo | undefined;
+  createEffect(() => {
+    if (!ready()) {
+      return;
+    }
+
+    const next = changeInfo();
+
+    if (
+      previousOverflowChange &&
+      valuesEqual(previousOverflowChange.visibleKeys, next.visibleKeys) &&
+      valuesEqual(previousOverflowChange.omittedKeys, next.omittedKeys)
+    ) {
+      return;
+    }
+
+    previousOverflowChange = next;
+    local.onOverflowChange?.(next);
+  });
+
   createEffect(() => {
     const container = containerWidth();
-    const rest = stableRestWidth();
-    const prefix = prefixWidth();
-    const suffix = suffixWidth();
-    const currentItems = renderedItems();
+    const rest = effectiveRestWidth();
+    const prefix = prefixWidth() ?? 0;
+    const suffix = suffixWidth() ?? 0;
+    const currentItems = ordered();
     const columnGap = getInlineGap();
+    const hasMeasured = measuredOnce();
 
     setSuffixInsetStart(null);
 
     const len = currentItems.length;
     if (!len) {
-      commitVisibleRange([0, -1], 0);
+      setReady(true);
+      setVisibleRange([0, -1]);
       return;
     }
 
     if (!isResponsive()) {
+      setReady(true);
       const lastIndex = len - 1;
-      const firstOrder = currentItems[0].order();
-      const lastOrder = currentItems[lastIndex].order();
+      const firstOrder = getOrder(currentItems[0])!;
+      const lastOrder = getOrder(currentItems[lastIndex])!;
 
       if (typeof local.maxCount !== "number") {
-        commitVisibleRange([firstOrder, lastOrder], len);
+        setVisibleRange([firstOrder, lastOrder]);
         return;
       }
 
       const visibleCount = Math.max(0, Math.min(local.maxCount, len));
 
       if (visibleCount === 0) {
-        commitVisibleRange([firstOrder, firstOrder - 1], 0);
+        setVisibleRange([firstOrder, firstOrder - 1]);
         return;
       }
 
-      if (collapse() === "start") {
-        const startOrder = currentItems[len - visibleCount].order();
-        commitVisibleRange([startOrder, lastOrder], visibleCount);
+      if (isStartCollapse()) {
+        const startOrder = getOrder(currentItems[len - visibleCount])!;
+        setVisibleRange([startOrder, lastOrder]);
         return;
       }
 
-      const endOrder = currentItems[visibleCount - 1].order();
-      commitVisibleRange([firstOrder, endOrder], visibleCount);
+      const endOrder = getOrder(currentItems[visibleCount - 1])!;
+      setVisibleRange([firstOrder, endOrder]);
       return;
     }
 
     if (!container) {
+      setReady(false);
       return;
     }
 
     const lastIndex = len - 1;
     const firstRecord = currentItems[0];
     const lastRecord = currentItems[lastIndex];
-    const firstOrder = firstRecord.order();
-    const lastOrder = lastRecord.order();
+    const firstOrder = getOrder(firstRecord)!;
+    const lastOrder = getOrder(lastRecord)!;
+
+    if (!isReady()) {
+      setReady(false);
+      if (!hasMeasured) {
+        setVisibleRange([firstOrder, lastOrder]);
+      }
+      return;
+    }
+
+    if (shouldExpand()) {
+      setReady(false);
+      if (!hasMeasured) {
+        setVisibleRange([firstOrder, lastOrder]);
+      }
+      return;
+    }
+
+    setReady(true);
+
     const firstWidth = firstRecord.width();
     const lastWidth = lastRecord.width();
-    const prefixCount = prefixRecord() ? 1 : 0;
-    const suffixCount = suffixRecord() ? 1 : 0;
+    const prefixCount = prefixWidth() != null ? 1 : 0;
+    const suffixCount = suffixWidth() != null ? 1 : 0;
     const fixedCount = prefixCount + suffixCount;
     const fixedWidth = prefix + suffix;
 
@@ -272,14 +374,13 @@ export default function OverflowRoot<T extends ValidComponent>(
       widthWithGap(width + rest, fixedCount + visibleCount + 1) > container;
 
     batch(() => {
-      if (collapse() === "start") {
+      if (isStartCollapse()) {
         for (let index = lastIndex; index >= 0; index -= 1) {
           const width = currentItems[index].width();
 
           if (width == null) {
-            const nextStart = Math.min(index + 1, lastIndex);
-            commitVisibleRange([currentItems[nextStart].order(), lastOrder]);
-            break;
+            setVisibleRange([firstOrder, lastOrder]);
+            return;
           }
 
           totalWidth += width;
@@ -291,16 +392,13 @@ export default function OverflowRoot<T extends ValidComponent>(
               firstWidth != null &&
               allItemsFit(totalWidth + firstWidth))
           ) {
-            commitVisibleRange([firstOrder, lastOrder], len);
+            setVisibleRange([firstOrder, lastOrder]);
             break;
           }
 
           if (overflowsWithRest(totalWidth, visibleCount)) {
             const nextStart = Math.min(index + 1, lastIndex);
-            commitVisibleRange(
-              [currentItems[nextStart].order(), lastOrder],
-              lastIndex - nextStart + 1,
-            );
+            setVisibleRange([getOrder(currentItems[nextStart])!, lastOrder]);
             break;
           }
         }
@@ -309,9 +407,8 @@ export default function OverflowRoot<T extends ValidComponent>(
           const width = currentItems[index].width();
 
           if (width == null) {
-            const nextEnd = Math.max(index - 1, 0);
-            commitVisibleRange([firstOrder, currentItems[nextEnd].order()]);
-            break;
+            setVisibleRange([firstOrder, lastOrder]);
+            return;
           }
 
           totalWidth += width;
@@ -323,7 +420,7 @@ export default function OverflowRoot<T extends ValidComponent>(
               lastWidth != null &&
               allItemsFit(totalWidth + lastWidth))
           ) {
-            commitVisibleRange([firstOrder, lastOrder], len);
+            setVisibleRange([firstOrder, lastOrder]);
             break;
           }
 
@@ -332,13 +429,10 @@ export default function OverflowRoot<T extends ValidComponent>(
             const nextVisibleCount = Math.max(nextEnd + 1, 0);
             const visibleWidth = Math.max(totalWidth - width - fixedWidth, 0);
             const elementsBeforeSuffix = prefixCount + nextVisibleCount + 1;
-            commitVisibleRange(
-              [
-                firstOrder,
-                nextEnd >= 0 ? currentItems[nextEnd].order() : firstOrder - 1,
-              ],
-              nextVisibleCount,
-            );
+            setVisibleRange([
+              firstOrder,
+              nextEnd >= 0 ? getOrder(currentItems[nextEnd])! : firstOrder - 1,
+            ]);
             setSuffixInsetStart(
               prefix + visibleWidth + rest + columnGap * elementsBeforeSuffix,
             );
@@ -347,7 +441,7 @@ export default function OverflowRoot<T extends ValidComponent>(
         }
       }
       if (
-        suffixRecord() &&
+        suffixWidth() != null &&
         firstWidth != null &&
         firstWidth + suffix > container
       ) {
@@ -357,37 +451,36 @@ export default function OverflowRoot<T extends ValidComponent>(
   });
 
   const context = {
-    batcher,
-
     responsive: isResponsive,
     invalidate: isInvalidate,
+    measuring,
     collapse,
-    containerWidth,
 
-    renderRest,
+    showRest,
     shouldExpand,
+    previewCount,
+    previewRange,
 
     sourceCount,
     setSourceCount,
 
     visibleRange,
-    omittedCount,
+    changeInfo,
 
     suffixInsetStart,
+    setPrefixWidth,
+    setRestWidth,
+    setSuffixWidth,
 
-    registerItem,
-    unregisterItem,
+    registerItem: register,
+    unregisterItem: unregister,
 
-    getItemWidth,
+    getItemOrder: getOrder,
   } satisfies OverflowContextValue;
 
   return (
     <OverflowContext.Provider value={context}>
-      <Polymorphic<OverflowRootOwnProps<ElementOf<T>>>
-        as={local.as}
-        ref={mergeRefs(local.ref, setRootRef)}
-        {...rest}
-      />
+      <Polymorphic as="div" ref={mergeRefs(local.ref, setRootRef)} {...rest} />
     </OverflowContext.Provider>
   );
 }

@@ -45,8 +45,12 @@ export { useOverflowContext, useOverflowItemContext } from "./OverflowContext";
 export type {
   OverflowContextValue,
   OverflowItemContextValue,
+} from "./OverflowContext";
+export type {
+  OverflowCollapse,
   OverflowItemKey,
   OverflowItemRecord,
-  OverflowItemRole,
   OverflowItemUid,
-} from "./OverflowContext";
+  OverflowChangeInfo,
+  OverflowVisibleRange,
+} from "./types";

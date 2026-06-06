@@ -1,8 +1,16 @@
-import type { Accessor, JSX } from 'solid-js'
+import type { JSX } from 'solid-js'
 import { render } from 'solid-js/web'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { popup, reposition, repositionOrder, rootOptions, hasAction, useWinClick } = vi.hoisted(() => {
+const {
+  popup,
+  reposition,
+  repositionOrder,
+  rootOptions,
+  hasAction,
+  onClickOutside,
+  makeEventListener,
+} = vi.hoisted(() => {
   const repositionOrder: string[] = []
   const reposition = vi.fn(async () => {
     repositionOrder.push('reposition')
@@ -17,15 +25,17 @@ const { popup, reposition, repositionOrder, rootOptions, hasAction, useWinClick 
     forceRender: undefined as boolean | undefined,
     closeOnClickOutside: undefined as boolean | undefined,
   }
-  const hasAction = vi.fn(() => false)
-  const useWinClick = vi.fn(() => vi.fn())
+  const hasAction = vi.fn<HasAction>(() => false)
+  const onClickOutside = vi.fn()
+  const makeEventListener = vi.fn()
   return {
     popup: document.createElement('div'),
     reposition,
     repositionOrder,
     rootOptions,
     hasAction,
-    useWinClick,
+    onClickOutside,
+    makeEventListener,
   }
 })
 
@@ -44,9 +54,14 @@ vi.mock('@solid-component/motion', () => ({
   },
 }))
 
-vi.mock('./hooks/useWinClick', () => ({
-  default: useWinClick,
-}))
+vi.mock('@solid-primitive/web', async () => {
+  const actual = await vi.importActual<typeof import('@solid-primitive/web')>('@solid-primitive/web')
+  return {
+    ...actual,
+    onClickOutside,
+    makeEventListener,
+  }
+})
 
 vi.mock('./FloatingContext', () => ({
   useFloatingContext: () => ({
@@ -78,6 +93,7 @@ vi.mock('./FloatingContext', () => ({
 }))
 
 import FloatingPopup from './FloatingPopup'
+import { HasAction } from './hooks/createHasAction'
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -88,7 +104,8 @@ afterEach(() => {
   rootOptions.closeOnClickOutside = undefined
   hasAction.mockReset()
   hasAction.mockReturnValue(false)
-  useWinClick.mockClear()
+  onClickOutside.mockReset()
+  makeEventListener.mockReset()
 })
 
 const mount = (view: () => JSX.Element) => {
@@ -104,6 +121,9 @@ const flushMicrotasks = async () => {
   await Promise.resolve()
   await Promise.resolve()
 }
+
+const hasContextMenuListener = () =>
+  makeEventListener.mock.calls.some((call) => call[1] === 'contextmenu')
 
 describe('FloatingPopup', () => {
   it('waits for reposition before running motion prepare', async () => {
@@ -154,10 +174,17 @@ describe('FloatingPopup', () => {
     )
 
     const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
-    const clickToHide = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
+    const handler = onClickOutside.mock.calls.at(-1)?.[1] as VoidFunction
 
-    expect(clickToHide()).toBe(true)
+    expect(onClickOutside).toHaveBeenCalledTimes(1)
+    handler()
 
+    expect(makeEventListener).toHaveBeenCalledWith(
+      expect.any(Array),
+      'contextmenu',
+      expect.any(Function),
+      { capture: true },
+    )
     dispose()
   })
 
@@ -166,11 +193,13 @@ describe('FloatingPopup', () => {
     rootOptions.closeOnClickOutside = true
 
     const firstMount = mount(() => <FloatingPopup>popup</FloatingPopup>)
-    const enabled = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
-    expect(enabled()).toBe(true)
+    const enabledHandler = onClickOutside.mock.calls.at(-1)?.[1] as VoidFunction
+    enabledHandler()
+    expect(hasContextMenuListener()).toBe(true)
     firstMount.dispose()
 
-    useWinClick.mockClear()
+    onClickOutside.mockReset()
+    makeEventListener.mockReset()
     rootOptions.closeOnClickOutside = false
     hasAction.mockImplementation(
       (type: 'show' | 'hide', action: string) =>
@@ -178,8 +207,9 @@ describe('FloatingPopup', () => {
     )
 
     const secondMount = mount(() => <FloatingPopup>popup</FloatingPopup>)
-    const disabled = useWinClick.mock.calls.at(-1)?.[1] as Accessor<boolean>
-    expect(disabled()).toBe(false)
+    const disabledHandler = onClickOutside.mock.calls.at(-1)?.[1] as VoidFunction
+    disabledHandler()
+    expect(hasContextMenuListener()).toBe(false)
     secondMount.dispose()
   })
 })

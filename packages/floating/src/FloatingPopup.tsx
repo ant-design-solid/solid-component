@@ -1,10 +1,21 @@
 import Motion from "@solid-component/motion";
 import type { ElementOf, PolymorphicProps } from "@solid-component/polymorphic";
-import { composeHandlers, mergeRefs, mergeStyle } from "@solid-component/utils";
-import { createElementSize, makeEventListener } from "@solid-primitive/web";
+import {
+  composeHandlers,
+  getShadowRoot,
+  mergeRefs,
+  mergeStyle,
+  warning,
+} from "@solid-component/utils";
+import {
+  createElementSize,
+  makeEventListener,
+  onClickOutside,
+} from "@solid-primitive/web";
 import {
   createEffect,
   createMemo,
+  DEV,
   splitProps,
   untrack,
   ValidComponent,
@@ -13,12 +24,11 @@ import type { JSX } from "solid-js/jsx-runtime";
 import type { FloatingMotionConfig } from "./FloatingContext";
 import { useFloatingContext } from "./FloatingContext";
 import useEscKeyDown from "./hooks/useEscKeyDown";
-import useWinClick from "./hooks/useWinClick";
 import { collectScroller, getWin } from "./utils";
 
 interface FloatingPopupCommonProps<T extends HTMLElement> extends Pick<
   JSX.HTMLAttributes<T>,
-  "ref" | "style" | "onMouseEnter" | "onMouseLeave" | "onPointerDown"
+  "ref" | "style" | "onMouseEnter" | "onMouseLeave"
 > {}
 
 export interface FloatingPopupProps<
@@ -51,7 +61,6 @@ export default function FloatingPopup<T extends ValidComponent>(
     "motion",
     "onMouseLeave",
     "onMouseEnter",
-    "onPointerDown",
   ]);
   const { size: triggerSize } = createElementSize(
     createMemo(() => (rootOptions().stretch ? triggerRef() : null)),
@@ -146,6 +155,7 @@ export default function FloatingPopup<T extends ValidComponent>(
         ...arrowStyle,
         ...offsetStyle,
         ...miscStyle,
+        position: "fixed",
         "box-sizing": "border-box",
         "z-index": local.zIndex,
       },
@@ -153,21 +163,75 @@ export default function FloatingPopup<T extends ValidComponent>(
     );
   });
 
-  const onPopupPointerDown = useWinClick(
-    open,
-    createMemo(() => {
-      const closeOnClickOutside = rootOptions().closeOnClickOutside;
+  const closeOnClickOutside = createMemo(() => {
+    const override = rootOptions().closeOnClickOutside;
+    return (
+      override ??
+      (hasAction("hide", "click") || hasAction("hide", "contextmenu"))
+    );
+  });
 
-      return (
-        closeOnClickOutside ??
-        (hasAction("hide", "click") || hasAction("hide", "contextmenu"))
-      );
-    }),
-    triggerRef,
+  onClickOutside(
     popupRef,
-    contains,
-    (next) => setOpen(next),
+    () => {
+      if (open() && closeOnClickOutside()) {
+        setOpen(false);
+      }
+    },
+    {
+      ignore: [triggerRef],
+    },
   );
+
+  const onContextMenuClose = (event: MouseEvent) => {
+    const target = event.composedPath?.()[0] ?? event.target;
+
+    if (!open() || !target || contains(target)) {
+      return;
+    }
+
+    setOpen(false);
+  };
+
+  createEffect(() => {
+    if (!closeOnClickOutside()) {
+      return;
+    }
+
+    const triggerEle = triggerRef();
+    const popupEle = popupRef();
+
+    const win = popupEle && getWin(popupEle);
+
+    if (!win) {
+      return;
+    }
+
+    const triggerRoot = getShadowRoot(triggerEle);
+    const popupRoot = getShadowRoot(popupEle);
+    const listenerRoots: (Window | ShadowRoot)[] = [win];
+
+    if (triggerRoot) {
+      listenerRoots.push(triggerRoot);
+    }
+    if (popupRoot && popupRoot !== triggerRoot) {
+      listenerRoots.push(popupRoot);
+    }
+
+    if (DEV && triggerEle && triggerRoot !== popupRoot) {
+      warning("trigger element and popup element should in same shadow root.", {
+        once: true,
+        package: "floating",
+      });
+    }
+
+    makeEventListener(
+      listenerRoots,
+      "contextmenu",
+      onContextMenuClose as EventListener,
+      { capture: true } as const,
+    );
+  });
 
   useEscKeyDown(open, (e) => {
     if (e.inStackTop) {
@@ -245,9 +309,9 @@ export default function FloatingPopup<T extends ValidComponent>(
       removeOnLeave={!rootOptions().forceRender}
       ref={mergeRefs(local.ref, setPopupRef)}
       style={popupStyle()}
+      aria-hidden={!open()}
       onMouseLeave={composeHandlers(local.onMouseLeave, onMouseLeave)}
       onMouseEnter={composeHandlers(local.onMouseEnter, onMouseEnter)}
-      onPointerDown={composeHandlers(local.onPointerDown, onPopupPointerDown)}
       {...motion()}
       {...others}
     />

@@ -14,8 +14,6 @@ interface OverflowSuffixCommonProps<T> extends Pick<
 export interface OverflowSuffixProps<T extends ValidComponent = "div">
   extends OverflowSuffixOwnProps, OverflowSuffixCommonProps<T> {}
 
-export const SUFFIX_UID = Symbol("overflow-suffix");
-
 export default function OverflowSuffix<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowSuffixProps<T>>,
 ) {
@@ -33,15 +31,20 @@ export default function OverflowSuffix<T extends ValidComponent>(
       left: `${suffixInsetStart}px`,
     });
   });
+  const visualOrder = createMemo(() => {
+    const [start, end] = rootContext.visibleRange();
+    if (end < start) {
+      return rootContext.collapse() === "start" ? start * 2 : 2;
+    }
+    return end * 2 + 2;
+  });
 
   return (
     <InternalItem
-      uid={SUFFIX_UID}
-      role="suffix"
-      show={true}
-      order={rootContext.visibleRange()[1]}
+      visualOrder={visualOrder()}
       invalidate={rootContext.invalidate()}
       responsive={rootContext.responsive()}
+      onWidthChange={rootContext.setSuffixWidth}
       style={style()}
       {...rest}
     />

@@ -11,8 +11,6 @@ export interface OverflowPrefixProps<
   T extends ValidComponent = "div",
 > extends OverflowPrefixOwnProps {}
 
-export const PREFIX_UID = Symbol("overflow-prefix");
-
 export default function OverflowPrefix<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowPrefixProps<T>>,
 ) {
@@ -20,12 +18,10 @@ export default function OverflowPrefix<T extends ValidComponent>(
 
   return (
     <InternalItem
-      uid={PREFIX_UID}
-      role="prefix"
-      show={true}
-      order={-1}
+      visualOrder={-1}
       invalidate={rootContext.invalidate()}
       responsive={rootContext.responsive()}
+      onWidthChange={rootContext.setPrefixWidth}
       {...(props as OverflowPrefixProps)}
     />
   );

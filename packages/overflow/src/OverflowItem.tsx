@@ -2,8 +2,8 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { mergeRefs, mergeStyle } from "@solid-component/utils";
-import { access, Optional } from "@solid-primitive/shared";
+import { makeRaf, mergeRefs, mergeStyle } from "@solid-component/utils";
+import { ValueOf } from "@solid-primitive/shared";
 import { createResizeObserver } from "@solid-primitive/web";
 import {
   createMemo,
@@ -17,21 +17,30 @@ import {
 } from "solid-js";
 import {
   OverflowItemContext,
-  OverflowItemKey,
-  OverflowItemRole,
-  OverflowItemUid,
   useOverflowContext,
   useOverflowItemContext,
 } from "./OverflowContext";
+import type { OverflowItemKey } from "./types";
+
+export const InternalItemVisibility = {
+  visible: "visible",
+  measure: "measure",
+  hidden: "hidden",
+} as const;
+export type InternalItemVisibility = ValueOf<typeof InternalItemVisibility>;
+
+const {
+  visible: VISIBLE,
+  measure: MEASURE,
+  hidden: HIDDEN,
+} = InternalItemVisibility;
 
 interface InternalItemOptions {
-  uid: OverflowItemUid;
-  key?: OverflowItemKey;
-  order: number;
-  role?: OverflowItemRole;
+  visualOrder?: number;
   responsive?: boolean;
-  show?: boolean;
+  visibility?: InternalItemVisibility;
   invalidate?: boolean;
+  onWidthChange?: (width: number | null) => void;
 }
 
 interface InternalItemCommonProps<T = HTMLElement> extends Pick<
@@ -39,68 +48,31 @@ interface InternalItemCommonProps<T = HTMLElement> extends Pick<
   "children" | "ref" | "style"
 > {}
 
-export type InternalItemProps<T extends ValidComponent> = InternalItemOptions &
-  InternalItemCommonProps<ElementOf<T>>;
+export type InternalItemProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+> = InternalItemOptions & InternalItemCommonProps<ElementOf<T>>;
 
 const defaults = {
-  role: "item",
+  visibility: VISIBLE,
 } as const;
 export function InternalItem<T extends ValidComponent>(
   props: PolymorphicProps<T, InternalItemProps<T>>,
 ) {
-  const { visibleRange, collapse, unregisterItem, registerItem, batcher } =
-    useOverflowContext();
   const merged = mergeProps(defaults, props);
   const [local, rest] = splitProps(merged, [
-    "uid",
-    "order",
-    "key",
-    "role",
     "ref",
     "style",
+    "visualOrder",
     "responsive",
-    "show",
+    "visibility",
     "invalidate",
-    "children",
+    "onWidthChange",
   ]);
 
   const [itemRef, setItemRef] = createSignal<HTMLElement>();
-  const [width, setWidth] = createSignal<number | null>(null);
 
-  const show = createMemo(() => {
-    if (local.invalidate) {
-      return true;
-    }
-
-    return local.show ?? true;
-  });
-
-  const visualOrder = createMemo(() => {
-    if (!local.responsive) {
-      return undefined;
-    }
-
-    if (local.role === "item") {
-      return local.order * 2;
-    }
-
-    const [start, end] = visibleRange();
-
-    if (local.role === "rest") {
-      if (end < start) {
-        return collapse() === "start" ? start * 2 - 1 : 1;
-      }
-      return collapse() === "start" ? start * 2 - 1 : end * 2 + 1;
-    }
-
-    if (local.role === "suffix") {
-      if (end < start) {
-        return collapse() === "start" ? start * 2 : 2;
-      }
-      return end * 2 + 2;
-    }
-
-    return local.order;
+  const visibility = createMemo(() => {
+    return local.invalidate ? VISIBLE : local.visibility;
   });
 
   const style = createMemo(() => {
@@ -109,10 +81,15 @@ export function InternalItem<T extends ValidComponent>(
     }
 
     const style: JSX.CSSProperties = {
-      order: visualOrder(),
+      order: local.responsive ? local.visualOrder : undefined,
     };
-    if (show()) {
+    if (visibility() === VISIBLE) {
       style["opacity"] = 1;
+    } else if (visibility() === MEASURE) {
+      style["opacity"] = 0;
+      style["pointer-events"] = "none";
+      style["position"] = "absolute";
+      style["visibility"] = "hidden";
     } else {
       style["opacity"] = 0;
       style["height"] = 0;
@@ -124,34 +101,25 @@ export function InternalItem<T extends ValidComponent>(
     return mergeStyle(local.style, style);
   });
 
-  const record = {
-    uid: local.uid,
-    key: local.key,
-    role: local.role,
-    el: itemRef,
-    order: createMemo(() => local.order),
-    width,
-  };
-
-  registerItem(record);
-
+  const [raf, cancelRaf] = makeRaf();
   const targetRef = createMemo(() => (local.responsive ? itemRef() : null));
   createResizeObserver(targetRef, ([entry]) => {
     const nextWidth = (entry.target as HTMLElement).offsetWidth;
-    void batcher.submit(() => {
-      setWidth(nextWidth);
+    raf(() => {
+      local.onWidthChange?.(nextWidth);
     });
   });
 
   onMount(() => {
     const ele = targetRef();
     if (ele && ele.offsetWidth > 0) {
-      setWidth(ele.offsetWidth);
+      local.onWidthChange?.(ele.offsetWidth);
     }
   });
 
   onCleanup(() => {
-    unregisterItem(local.uid);
+    local.onWidthChange?.(null);
+    cancelRaf();
   });
 
   return (
@@ -159,22 +127,17 @@ export function InternalItem<T extends ValidComponent>(
       as="div"
       ref={mergeRefs(local.ref, setItemRef)}
       style={style()}
-      aria-hidden={!show()}
+      aria-hidden={visibility() !== VISIBLE}
       {...rest}
-    >
-      {local.children}
-    </Polymorphic>
+    />
   );
 }
 
-export interface OverflowItemOwnProps<T extends HTMLElement = HTMLElement>
-  extends
-    Partial<InternalItemCommonProps<T>>,
-    Optional<
-      Omit<InternalItemOptions, "responsive" | "invalidate" | "uid" | "id">,
-      "order"
-    > {
+export interface OverflowItemOwnProps<
+  T extends HTMLElement = HTMLElement,
+> extends InternalItemCommonProps<T> {
   key?: OverflowItemKey;
+  index?: number;
 }
 
 export type OverflowItemProps<
@@ -187,34 +150,71 @@ export default function OverflowItem<T extends ValidComponent>(
   const [local, rest] = splitProps(props as OverflowItemProps, [
     "ref",
     "key",
-    "order",
-    "role",
+    "index",
   ]);
 
-  const { visibleRange, responsive, invalidate } = useOverflowContext();
+  const {
+    visibleRange,
+    responsive,
+    invalidate,
+    measuring,
+    previewRange,
+    getItemOrder,
+    registerItem,
+    unregisterItem,
+  } = useOverflowContext();
   const itemContext = useOverflowItemContext();
 
   const uid = Symbol("overflow-item");
-  const order = createMemo(
-    () => access(local.order) ?? itemContext?.order() ?? 0,
-  );
-  const show = createMemo(() => {
+  const [itemRef, setItemRef] = createSignal<HTMLElement>();
+  const [width, setWidth] = createSignal<number | null>(null);
+  const order = createMemo(() => getItemOrder(uid)!);
+  const inVisibleRange = () => {
     const currentOrder = order();
     const [start, end] = visibleRange();
     return currentOrder >= start && currentOrder <= end;
+  };
+  const inPreviewRange = () => {
+    const range = previewRange();
+    if (!range) {
+      return false;
+    }
+
+    const currentOrder = order();
+    const [start, end] = range;
+    return currentOrder >= start && currentOrder <= end;
+  };
+  const visibility = createMemo<InternalItemVisibility>(() => {
+    if (responsive() && measuring()) {
+      return inPreviewRange() ? VISIBLE : MEASURE;
+    }
+
+    return inVisibleRange() ? VISIBLE : HIDDEN;
+  });
+
+  const record = {
+    uid,
+    key: local.key ?? itemContext?.key,
+    ref: itemRef,
+    index: () => local.index ?? itemContext?.index(),
+    width,
+  };
+
+  registerItem(record);
+
+  onCleanup(() => {
+    unregisterItem(uid);
   });
 
   return (
     <OverflowItemContext.Provider value={null}>
       <InternalItem
-        ref={local.ref}
-        uid={uid}
-        key={local.key ?? itemContext?.key}
-        order={order()}
-        role={local.role ?? itemContext?.role}
-        show={show()}
+        ref={mergeRefs(local.ref, setItemRef)}
+        visualOrder={order() * 2}
+        visibility={visibility()}
         responsive={responsive()}
         invalidate={invalidate()}
+        onWidthChange={setWidth}
         {...rest}
       />
     </OverflowItemContext.Provider>

@@ -6,19 +6,17 @@ import {
   createSignal,
   For,
   JSX,
-  mergeProps,
   onCleanup,
 } from "solid-js";
 import {
   OverflowItemContext,
   OverflowItemContextValue,
-  OverflowItemKey,
   useOverflowContext,
 } from "./OverflowContext";
+import type { OverflowItemKey } from "./types";
 
 export interface OverflowItemsOwnProps<T extends readonly any[]> {
   by?: KeyOf<ValueOf<T>> | ((item: T[number]) => OverflowItemKey);
-  estimatedItemWidth?: number;
   data: T | undefined | null | false;
   fallback?: JSX.Element;
   children: (item: T[number], index: Accessor<number>) => JSX.Element;
@@ -27,17 +25,18 @@ export interface OverflowItemsOwnProps<T extends readonly any[]> {
 export type OverflowItemsProps<T extends readonly any[]> =
   OverflowItemsOwnProps<T>;
 
-const defaults = {
-  estimatedItemWidth: 10,
-} as const;
 export default function OverflowItems<T extends readonly any[]>(
   props: OverflowItemsOwnProps<T>,
 ) {
-  const merged = mergeProps(defaults, props);
-  const { responsive, setSourceCount, containerWidth, shouldExpand, collapse } =
-    useOverflowContext();
+  const {
+    responsive,
+    setSourceCount,
+    shouldExpand,
+    previewCount,
+    collapse,
+  } = useOverflowContext();
 
-  const source = createMemo(() => merged.data || []);
+  const source = createMemo(() => props.data || []);
   const [measurementCount, setMeasurementCount] = createSignal(1);
 
   createEffect(() => {
@@ -61,11 +60,7 @@ export default function OverflowItems<T extends readonly any[]>(
       return;
     }
 
-    const width = containerWidth();
-    const baseCount = width
-      ? Math.max(1, Math.floor(width / merged.estimatedItemWidth))
-      : 1;
-
+    const baseCount = previewCount() ?? 1;
     setMeasurementCount((prev) => Math.min(total, Math.max(baseCount, prev)));
   });
 
@@ -117,8 +112,7 @@ export default function OverflowItems<T extends readonly any[]>(
 
         const itemContext = {
           key: id(),
-          order: sourceIndex,
-          role: "item",
+          index: sourceIndex,
         } satisfies OverflowItemContextValue;
 
         return (

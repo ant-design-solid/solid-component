@@ -1,45 +1,73 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
-import { JSX, Show, ValidComponent, mergeProps, splitProps } from "solid-js";
+import {
+  createMemo,
+  JSX,
+  Show,
+  ValidComponent,
+  mergeProps,
+  splitProps,
+} from "solid-js";
 import { useOverflowContext } from "./OverflowContext";
-import { InternalItem } from "./OverflowItem";
+import { InternalItem, InternalItemVisibility } from "./OverflowItem";
+import { OverflowChangeInfo } from "./types";
 
 export interface OverflowRestOwnProps {
-  children: JSX.Element | ((omittedCount: number) => JSX.Element);
+  children: JSX.Element | ((info: OverflowChangeInfo) => JSX.Element);
 }
 
 export type OverflowRestProps<T extends ValidComponent = "div"> =
   Partial<OverflowRestOwnProps>;
 
-function defaultRenderRest(omittedCount: number) {
-  return `+ ${omittedCount} ...`;
+function defaultshowRest(info: OverflowChangeInfo) {
+  return `+ ${info.omittedCount} ...`;
 }
 
-export const REST_UID = Symbol("overflow-rest");
-
 const defaults = {
-  children: defaultRenderRest,
+  children: defaultshowRest,
 } as const;
 export default function OverflowRest<T extends ValidComponent>(
   props: PolymorphicProps<T, OverflowRestProps<T>>,
 ) {
-  const { omittedCount, renderRest, invalidate, responsive, visibleRange } =
-    useOverflowContext();
+  const {
+    changeInfo,
+    showRest,
+    invalidate,
+    responsive,
+    visibleRange,
+    measuring,
+    collapse,
+    setRestWidth,
+  } = useOverflowContext();
   const merged = mergeProps(defaults, props as OverflowRestProps);
   const [local, rest] = splitProps(merged, ["children"]);
 
+  const visibility = () =>
+    measuring()
+      ? InternalItemVisibility.measure
+      : changeInfo().omittedCount > 0
+        ? InternalItemVisibility.visible
+        : InternalItemVisibility.hidden;
+
+  const visualOrder = createMemo(() => {
+    const [start, end] = visibleRange();
+    if (end < start) {
+      return collapse() === "start" ? start * 2 - 1 : 1;
+    }
+    return collapse() === "start" ? start * 2 - 1 : end * 2 + 1;
+  });
+
   return (
-    <Show when={renderRest()}>
+    <Show when={showRest()}>
       <InternalItem
-        uid={REST_UID}
-        role="rest"
-        show={omittedCount() > 0}
-        order={visibleRange()[1]}
+        visibility={visibility()}
+        visualOrder={visualOrder()}
         invalidate={invalidate()}
         responsive={responsive()}
+        onWidthChange={setRestWidth}
         {...rest}
       >
         {typeof local.children === "function"
-          ? local.children(omittedCount())
+          ? local.children(changeInfo())
           : local.children}
       </InternalItem>
     </Show>

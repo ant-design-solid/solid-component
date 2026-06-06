@@ -25,7 +25,6 @@ and popovers without baking in visual design.
   title="Interactive demo"
   description="This example uses click-triggered state, a portal-backed popup and a simple arrow."
   source={BasicSource}
-  
 >
   <Basic />
 </DemoCard>
@@ -47,7 +46,7 @@ Connects user actions such as click, hover, focus or context menu to the state e
 Wraps the visible layer and coordinates position updates, outside-click handling and optional
 motion.
 
-### `Floating.Portal` and `Floating.Arrow`
+### `Floating.Arrow`
 
 Use `Portal` when the popup should escape local stacking contexts, and `Arrow` when the layer
 needs a pointer that follows the resolved alignment.
@@ -62,8 +61,3 @@ needs a pointer that follows the resolved alignment.
 - If you need a controlled popup, pass `open` and `onOpenChange` to `Floating.Root`.
 - `action`, `showAction` and `hideAction` let you mix multiple interaction modes without forking
   the primitive.
-
-<Callout tone="tip" title="Composition-first">
-  Keep your popup markup inside `Floating.Popup` close to the design system that styles it. This
-  package is most useful when it stays below your visual components, not when it becomes one.
-</Callout>

@@ -10,9 +10,14 @@ import OverflowSuffix from "./OverflowSuffix";
 
 type Modules = "prefix" | "suffix" | "rest" | "item";
 
-const ROOT_PROPS = ["maxCount", "collapse", "onVisibleChange"] as const;
+const ROOT_PROPS = [
+  "maxCount",
+  "collapse",
+  "preview",
+  "onOverflowChange",
+] as const;
 
-const ITEMS_PROPS = ["by", "estimatedItemWidth", "data"] as const;
+const ITEMS_PROPS = ["by", "data"] as const;
 export interface OverflowOwnProps<T extends readonly any[] = readonly any[]>
   extends
     Pick<OverflowRootOwnProps, ValueOf<typeof ROOT_PROPS>>,

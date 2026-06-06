@@ -1,4 +1,4 @@
-import { isDOM, isVisible } from "@solid-component/utils";
+import { isVisible } from "@solid-component/utils";
 import { $DISCARD, createBatcher } from "@solid-primitive/shared";
 import {
   type Accessor,
@@ -63,8 +63,9 @@ function getAlignPoint(rect: Rect, points: Points) {
   return { x, y };
 }
 
+const reverseMap: Record<string, string> = { t: "b", b: "t", l: "r", r: "l" };
+
 function reversePoints(points: Points, index: number): Points {
-  const reverseMap: Record<string, string> = { t: "b", b: "t", l: "r", r: "l" };
   const clone = [...points] as Points;
   clone[index] = (reverseMap[points[index]] || "c") as Points[0];
   return clone;
@@ -296,7 +297,7 @@ export default function createFloating(
     if (
       scaleX === 0 ||
       scaleY === 0 ||
-      (isDOM(targetValue) && !isVisible(targetValue))
+      (!Array.isArray(targetValue) && !isVisible(targetValue))
     ) {
       return false;
     }

@@ -1,4 +1,7 @@
-import { createControllableSignal } from "@solid-component/utils";
+import {
+  createControllableSignal,
+  getShadowRoot,
+} from "@solid-component/utils";
 import {
   createMemo,
   createSignal,
@@ -17,14 +20,6 @@ import createFloating from "./hooks/createFloating";
 import createHasAction, { ActionType } from "./hooks/createHasAction";
 import useDelay from "./hooks/useDelay";
 
-function getShadowRoot(ele: Node) {
-  const root = ele.getRootNode();
-  if (root instanceof ShadowRoot) {
-    return root;
-  }
-  return null;
-}
-
 export interface FloatingRootOwnProps extends Partial<FloatingRootOptions> {
   open?: boolean;
   defaultOpen?: boolean;
@@ -39,7 +34,7 @@ export interface FloatingRootOwnProps extends Partial<FloatingRootOptions> {
   delay?: FloatingDelay;
 }
 
-export type FloatingRootProps = FloatingRootOwnProps;
+export interface FloatingRootProps extends FloatingRootOwnProps {}
 
 const defaults = {
   defaultOpen: false,
