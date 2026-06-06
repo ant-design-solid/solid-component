@@ -4,8 +4,12 @@ import Polymorphic, {
 } from "@solid-component/polymorphic";
 import { Show, splitProps, type JSX, type ValidComponent } from "solid-js";
 
+export type MenuGroupPart = "label" | "items";
+
 export interface MenuGroupOwnProps {
   label?: JSX.Element;
+  classes?: Partial<Record<MenuGroupPart, string>>;
+  styles?: Partial<Record<MenuGroupPart, JSX.CSSProperties | string>>;
 }
 
 export interface MenuGroupCommonProps<T extends HTMLElement> extends Pick<
@@ -24,16 +28,25 @@ export default function MenuGroup<T extends ValidComponent>(
   const [local, rest] = splitProps(props as MenuGroupProps<"div">, [
     "label",
     "children",
+    "classes",
+    "styles",
   ]);
 
   return (
-    <Polymorphic<JSX.HTMLAttributes<ElementOf<T>>>
-      as="div"
-      role="group"
-      {...rest}
-    >
-      <Show when={local.label}>{(label) => label()}</Show>
-      {local.children}
+    <Polymorphic as="li" role="presentation" {...rest}>
+      <Show when={local.label}>
+        <div
+          class={local.classes?.label}
+          style={local.styles?.label}
+          role="presentation"
+          title={typeof local.label === "string" ? local.label : undefined}
+        >
+          {local.label}
+        </div>
+      </Show>
+      <ul role="group" class={local.classes?.items} style={local.styles?.items}>
+        {local.children}
+      </ul>
     </Polymorphic>
   );
 }

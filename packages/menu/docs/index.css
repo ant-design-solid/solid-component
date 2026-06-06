@@ -73,12 +73,12 @@
   background: #eef4ff;
 }
 
-.sc-menu [role="menuitem"][aria-expanded="true"] {
+.sc-menu:not([role="menubar"]) [role="menuitem"][aria-expanded="true"] {
   color: #174ea6;
   font-weight: 600;
 }
 
-.sc-menu [data-menu-key="profile"] {
+.sc-menu [aria-selected="true"] {
   background: #e7f0ff;
   color: #174ea6;
   font-weight: 600;

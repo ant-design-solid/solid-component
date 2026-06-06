@@ -6,6 +6,70 @@ export type GeneratedPackageApiItem = {
 };
 
 export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
+  "color-area": [],
+  "color-slider": [
+    {
+      "name": "ColorSliderRail",
+      "kind": "component",
+      "source": "ColorSliderRail.tsx"
+    },
+    {
+      "name": "ColorSliderRoot",
+      "kind": "component",
+      "source": "ColorSliderRoot.tsx"
+    },
+    {
+      "name": "ColorSliderThumb",
+      "kind": "component",
+      "source": "ColorSliderThumb.tsx"
+    },
+    {
+      "name": "ColorSliderContext",
+      "kind": "function",
+      "source": "ColorSliderContext.tsx"
+    },
+    {
+      "name": "ColorSliderContextValue",
+      "kind": "type",
+      "source": "ColorSliderContext.tsx"
+    },
+    {
+      "name": "ColorSliderRailProps",
+      "kind": "type",
+      "source": "ColorSliderRail.tsx"
+    },
+    {
+      "name": "ColorSliderRootOwnProps",
+      "kind": "type",
+      "source": "ColorSliderRoot.tsx"
+    },
+    {
+      "name": "ColorSliderRootProps",
+      "kind": "type",
+      "source": "ColorSliderRoot.tsx"
+    },
+    {
+      "name": "ColorSliderStrategy",
+      "kind": "type",
+      "source": "strategies.ts"
+    },
+    {
+      "name": "ColorSliderThumbOwnProps",
+      "kind": "type",
+      "source": "ColorSliderThumb.tsx"
+    },
+    {
+      "name": "ColorSliderThumbProps",
+      "kind": "type",
+      "source": "ColorSliderThumb.tsx"
+    },
+    {
+      "name": "ColorSliderType",
+      "kind": "type",
+      "source": "strategies.ts"
+    }
+  ],
+  "field": [],
   "floating": [
     {
       "name": "FloatingArrow",
@@ -113,6 +177,143 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "FloatingTrigger.tsx"
     }
   ],
+  "menu": [
+    {
+      "name": "MenuDivider",
+      "kind": "component",
+      "source": "MenuDivider.tsx"
+    },
+    {
+      "name": "MenuGroup",
+      "kind": "component",
+      "source": "MenuGroup.tsx"
+    },
+    {
+      "name": "MenuItem",
+      "kind": "component",
+      "source": "MenuItem.tsx"
+    },
+    {
+      "name": "MenuMore",
+      "kind": "component",
+      "source": "MenuMore.tsx"
+    },
+    {
+      "name": "MenuRoot",
+      "kind": "component",
+      "source": "MenuRoot.tsx"
+    },
+    {
+      "name": "MenuSubmenu",
+      "kind": "component",
+      "source": "MenuSubmenu.tsx"
+    },
+    {
+      "name": "MenuSubmenuContent",
+      "kind": "component",
+      "source": "MenuSubmenuContent.tsx"
+    },
+    {
+      "name": "MenuActionInfo",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "MenuDividerProps",
+      "kind": "type",
+      "source": "MenuDivider.tsx"
+    },
+    {
+      "name": "MenuGroupOwnProps",
+      "kind": "type",
+      "source": "MenuGroup.tsx"
+    },
+    {
+      "name": "MenuGroupProps",
+      "kind": "type",
+      "source": "MenuGroup.tsx"
+    },
+    {
+      "name": "MenuInfo",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "MenuItemOwnProps",
+      "kind": "type",
+      "source": "MenuItem.tsx"
+    },
+    {
+      "name": "MenuItemProps",
+      "kind": "type",
+      "source": "MenuItem.tsx"
+    },
+    {
+      "name": "MenuItemRenderState",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "MenuKey",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "MenuMode",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "MenuMoreOwnProps",
+      "kind": "type",
+      "source": "MenuMore.tsx"
+    },
+    {
+      "name": "MenuMoreProps",
+      "kind": "type",
+      "source": "MenuMore.tsx"
+    },
+    {
+      "name": "MenuRootElementProps",
+      "kind": "type",
+      "source": "MenuRoot.tsx"
+    },
+    {
+      "name": "MenuRootOwnProps",
+      "kind": "type",
+      "source": "MenuRoot.tsx"
+    },
+    {
+      "name": "MenuRootProps",
+      "kind": "type",
+      "source": "MenuRoot.tsx"
+    },
+    {
+      "name": "MenuSubmenuContentOwnProps",
+      "kind": "type",
+      "source": "MenuSubmenuContent.tsx"
+    },
+    {
+      "name": "MenuSubmenuContentProps",
+      "kind": "type",
+      "source": "MenuSubmenuContent.tsx"
+    },
+    {
+      "name": "MenuSubmenuOwnProps",
+      "kind": "type",
+      "source": "MenuSubmenu.tsx"
+    },
+    {
+      "name": "MenuSubmenuProps",
+      "kind": "type",
+      "source": "MenuSubmenu.tsx"
+    },
+    {
+      "name": "SelectInfo",
+      "kind": "type",
+      "source": "types.ts"
+    }
+  ],
   "motion": [
     {
       "name": "Motion",
@@ -125,11 +326,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "MotionGroup.tsx"
     },
     {
-      "name": "MotionBaseProps",
-      "kind": "type",
-      "source": "types.ts"
-    },
-    {
       "name": "MotionGroupOwnProps",
       "kind": "type",
       "source": "MotionGroup.tsx"
@@ -138,11 +334,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "MotionGroupProps",
       "kind": "type",
       "source": "MotionGroup.tsx"
-    },
-    {
-      "name": "MotionLifecycle",
-      "kind": "type",
-      "source": "types.ts"
     },
     {
       "name": "MotionName",
@@ -207,13 +398,28 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "OverflowSuffix.tsx"
     },
     {
+      "name": "useOverflowContext",
+      "kind": "hook",
+      "source": "OverflowContext.tsx"
+    },
+    {
       "name": "useOverflowItemContext",
       "kind": "hook",
       "source": "OverflowContext.tsx"
     },
     {
-      "name": "useOverflowRootContext",
-      "kind": "hook",
+      "name": "OverflowChangeInfo",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "OverflowCollapse",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
+      "name": "OverflowContextValue",
+      "kind": "type",
       "source": "OverflowContext.tsx"
     },
     {
@@ -222,14 +428,9 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "OverflowContext.tsx"
     },
     {
-      "name": "OverflowItemId",
-      "kind": "type",
-      "source": "OverflowContext.tsx"
-    },
-    {
       "name": "OverflowItemKey",
       "kind": "type",
-      "source": "OverflowContext.tsx"
+      "source": "types.ts"
     },
     {
       "name": "OverflowItemOwnProps",
@@ -244,12 +445,7 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
     {
       "name": "OverflowItemRecord",
       "kind": "type",
-      "source": "OverflowContext.tsx"
-    },
-    {
-      "name": "OverflowItemRole",
-      "kind": "type",
-      "source": "OverflowContext.tsx"
+      "source": "types.ts"
     },
     {
       "name": "OverflowItemsOwnProps",
@@ -262,9 +458,14 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "OverflowItems.tsx"
     },
     {
+      "name": "OverflowItemUid",
+      "kind": "type",
+      "source": "types.ts"
+    },
+    {
       "name": "OverflowOwnProps",
       "kind": "type",
-      "source": "index.tsx"
+      "source": "Overflow.tsx"
     },
     {
       "name": "OverflowPrefixOwnProps",
@@ -279,7 +480,7 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
     {
       "name": "OverflowProps",
       "kind": "type",
-      "source": "index.tsx"
+      "source": "Overflow.tsx"
     },
     {
       "name": "OverflowRestOwnProps",
@@ -290,11 +491,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "OverflowRestProps",
       "kind": "type",
       "source": "OverflowRest.tsx"
-    },
-    {
-      "name": "OverflowRootContextValue",
-      "kind": "type",
-      "source": "OverflowContext.tsx"
     },
     {
       "name": "OverflowRootOwnProps",
@@ -315,6 +511,11 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "OverflowSuffixProps",
       "kind": "type",
       "source": "OverflowSuffix.tsx"
+    },
+    {
+      "name": "OverflowVisibleRange",
+      "kind": "type",
+      "source": "types.ts"
     }
   ],
   "polymorphic": [
@@ -342,6 +543,103 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "index.tsx"
     }
   ],
+  "slider": [
+    {
+      "name": "SliderRail",
+      "kind": "component",
+      "source": "SliderRail.tsx"
+    },
+    {
+      "name": "SliderRoot",
+      "kind": "component",
+      "source": "SliderRoot.tsx"
+    },
+    {
+      "name": "SliderThumb",
+      "kind": "component",
+      "source": "SliderThumb.tsx"
+    },
+    {
+      "name": "SliderThumbs",
+      "kind": "component",
+      "source": "SliderThumbs.tsx"
+    },
+    {
+      "name": "SliderTrack",
+      "kind": "component",
+      "source": "SliderTrack.tsx"
+    },
+    {
+      "name": "SliderContext",
+      "kind": "function",
+      "source": "SliderContext.tsx"
+    },
+    {
+      "name": "SliderContextValue",
+      "kind": "type",
+      "source": "SliderContext.tsx"
+    },
+    {
+      "name": "SliderRailProps",
+      "kind": "type",
+      "source": "SliderRail.tsx"
+    },
+    {
+      "name": "SliderRootElementProps",
+      "kind": "type",
+      "source": "SliderRoot.tsx"
+    },
+    {
+      "name": "SliderRootOwnProps",
+      "kind": "type",
+      "source": "SliderRoot.tsx"
+    },
+    {
+      "name": "SliderRootProps",
+      "kind": "type",
+      "source": "SliderRoot.tsx"
+    },
+    {
+      "name": "SliderThumbOwnProps",
+      "kind": "type",
+      "source": "SliderThumb.tsx"
+    },
+    {
+      "name": "SliderThumbProps",
+      "kind": "type",
+      "source": "SliderThumb.tsx"
+    },
+    {
+      "name": "SliderThumbRenderState",
+      "kind": "type",
+      "source": "SliderThumbs.tsx"
+    },
+    {
+      "name": "SliderThumbsProps",
+      "kind": "type",
+      "source": "SliderThumbs.tsx"
+    },
+    {
+      "name": "SliderThumbState",
+      "kind": "type",
+      "source": "SliderContext.tsx"
+    },
+    {
+      "name": "SliderTrackOwnProps",
+      "kind": "type",
+      "source": "SliderTrack.tsx"
+    },
+    {
+      "name": "SliderTrackProps",
+      "kind": "type",
+      "source": "SliderTrack.tsx"
+    },
+    {
+      "name": "SliderValue",
+      "kind": "type",
+      "source": "SliderContext.tsx"
+    }
+  ],
   "utils": [
     {
       "name": "access",
@@ -356,22 +654,52 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
     {
       "name": "canUseDom",
       "kind": "function",
-      "source": "dom.ts"
+      "source": "dom/index.ts"
+    },
+    {
+      "name": "Color",
+      "kind": "function",
+      "source": "color/Color.ts"
+    },
+    {
+      "name": "composeHandlers",
+      "kind": "function",
+      "source": "events.ts"
+    },
+    {
+      "name": "createControllableSignal",
+      "kind": "function",
+      "source": "primitives/createControllableSignal.ts"
+    },
+    {
+      "name": "createOrderedRegistry",
+      "kind": "function",
+      "source": "primitives/createOrderedRegistry.ts"
+    },
+    {
+      "name": "error",
+      "kind": "function",
+      "source": "warn.ts"
     },
     {
       "name": "getDOM",
       "kind": "function",
-      "source": "dom.ts"
+      "source": "dom/index.ts"
     },
     {
       "name": "isDOM",
       "kind": "function",
-      "source": "dom.ts"
+      "source": "dom/index.ts"
     },
     {
       "name": "isVisible",
       "kind": "function",
-      "source": "dom.ts"
+      "source": "dom/isVisible.ts"
+    },
+    {
+      "name": "makeRaf",
+      "kind": "function",
+      "source": "raf.ts"
     },
     {
       "name": "mergeRefs",
@@ -384,20 +712,80 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "solid.ts"
     },
     {
+      "name": "triggerFocus",
+      "kind": "function",
+      "source": "dom/focus.ts"
+    },
+    {
       "name": "tryOnCleanup",
       "kind": "function",
       "description": "不在组件内运行时会报错",
       "source": "utils/solid.d.ts"
     },
     {
+      "name": "warning",
+      "kind": "function",
+      "source": "warn.ts"
+    },
+    {
       "name": "Assign",
       "kind": "type",
-      "source": "dom.ts"
+      "source": "utils/type.d.ts"
+    },
+    {
+      "name": "ColorFormat",
+      "kind": "type",
+      "source": "color/types.ts"
+    },
+    {
+      "name": "ColorInput",
+      "kind": "type",
+      "source": "color/types.ts"
+    },
+    {
+      "name": "CreateControllableSignalProps",
+      "kind": "type",
+      "source": "primitives/createControllableSignal.ts"
+    },
+    {
+      "name": "CreateOrderedRegistryOptions",
+      "kind": "type",
+      "source": "primitives/createOrderedRegistry.ts"
+    },
+    {
+      "name": "HSL",
+      "kind": "type",
+      "source": "color/types.ts"
+    },
+    {
+      "name": "HSV",
+      "kind": "type",
+      "source": "color/types.ts"
     },
     {
       "name": "MaybeAccessor",
       "kind": "type",
       "source": "utils/solid.d.ts"
+    },
+    {
+      "name": "OrderedRegistryRecord",
+      "kind": "type",
+      "source": "primitives/createOrderedRegistry.ts"
+    },
+    {
+      "name": "OrderedRegistryUid",
+      "kind": "type",
+      "source": "primitives/createOrderedRegistry.ts"
+    },
+    {
+      "name": "RGB",
+      "kind": "type",
+      "source": "color/types.ts"
+    },
+    {
+      "name": "WarningOptions",
+      "kind": "type",
+      "source": "warn.ts"
     }
   ]
 };

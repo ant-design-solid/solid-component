@@ -1,3 +1,7 @@
+import {
+  OverflowRoot,
+  type OverflowChangeInfo,
+} from "@solid-component/overflow";
 import Polymorphic, {
   type ElementOf,
   type PolymorphicProps,
@@ -5,13 +9,17 @@ import Polymorphic, {
 import {
   composeHandlers,
   createControllableSignal,
+  createOrderedRegistry,
+  mergeRefs,
   warning,
 } from "@solid-component/utils";
 import {
   createMemo,
   createSignal,
   mergeProps,
+  Show,
   splitProps,
+  untrack,
   type JSX,
   type ValidComponent,
 } from "solid-js";
@@ -20,6 +28,7 @@ import {
   type MenuEntry,
   type MenuRootContextValue,
 } from "./MenuContext";
+import { MEMU_MORE_UID } from "./MenuMore";
 import { getMenuArrowKeys } from "./menu-keydown";
 import {
   MenuActionInfo,
@@ -27,7 +36,8 @@ import {
   MenuInfo,
   MenuKey,
   MenuMode,
-  MenuSubmenuTrigger,
+  MenuMotionConfig,
+  MenuPopupOptions,
   SelectInfo,
 } from "./types";
 
@@ -42,13 +52,36 @@ export interface MenuRootOwnProps {
   loop?: boolean;
   mode?: MenuMode;
   direction?: MenuDirection;
-  submenuTrigger?: MenuSubmenuTrigger;
+  popup?: MenuPopupOptions;
+  motion?: MenuMotionConfig;
+  motions?: Partial<Record<MenuMode, MenuMotionConfig>>;
   onSelect?: (info: SelectInfo) => void;
   onDeselect?: (info: SelectInfo) => void;
   onSelectionChange?: (selectedKeys: MenuKey[], info: SelectInfo) => void;
   onOpenChange?: (openKeys: MenuKey[]) => void;
   onAction?: (info: MenuActionInfo) => void;
 }
+
+export const MENU_ROOT_OWN_PROPS = [
+  "selectedKeys",
+  "defaultSelectedKeys",
+  "openKeys",
+  "defaultOpenKeys",
+  "selectable",
+  "multiple",
+  "disabled",
+  "loop",
+  "mode",
+  "direction",
+  "popup",
+  "motion",
+  "motions",
+  "onSelect",
+  "onDeselect",
+  "onSelectionChange",
+  "onOpenChange",
+  "onAction",
+] as const;
 
 export interface MenuRootCommonProps<T extends HTMLElement> extends Pick<
   JSX.HTMLAttributes<T>,
@@ -75,33 +108,25 @@ const defaults = {
   loop: true,
   mode: MenuMode.vertical,
   direction: MenuDirection.ltr,
-  submenuTrigger: "hover",
   defaultSelectedKeys: [] as MenuKey[],
   defaultOpenKeys: [] as MenuKey[],
+  popup: {} as MenuPopupOptions,
 } as const;
+
+const emptyOverflowInfo: OverflowChangeInfo = {
+  visibleKeys: [],
+  omittedKeys: [],
+  omittedCount: 0,
+};
 
 export default function MenuRoot<T extends ValidComponent>(
   props: PolymorphicProps<T, MenuRootProps<T>>,
 ) {
   const merged = mergeProps(defaults, props as MenuRootProps);
   const [local, rest] = splitProps(merged, [
-    "selectedKeys",
-    "defaultSelectedKeys",
-    "openKeys",
-    "defaultOpenKeys",
-    "selectable",
-    "multiple",
-    "disabled",
-    "loop",
-    "mode",
-    "direction",
-    "submenuTrigger",
-    "onSelect",
-    "onDeselect",
-    "onSelectionChange",
-    "onOpenChange",
-    "onAction",
+    ...MENU_ROOT_OWN_PROPS,
     "onKeyDown",
+    "ref",
   ]);
   const horizontal = () => local.mode === MenuMode.horizontal;
   const inline = () => local.mode === MenuMode.inline;
@@ -115,18 +140,38 @@ export default function MenuRoot<T extends ValidComponent>(
     defaultValue: local.defaultOpenKeys,
   });
   const [activeKey, setActiveKey] = createSignal<MenuKey>();
-  const [entries, setEntries] = createSignal<MenuEntry[]>([]);
+  const [overflowInfo, setOverflowInfo] =
+    createSignal<OverflowChangeInfo>(emptyOverflowInfo);
+  const [rootRef, setRootRef] = createSignal<HTMLElement>();
+  const { registry, items, ordered, register, unregister } =
+    createOrderedRegistry<MenuEntry>({
+      rootRef,
+      package: "menu",
+    });
+
   const entriesByKey = createMemo(() => {
     const next = new Map<MenuKey, MenuEntry>();
 
-    for (const entry of entries()) {
-      next.set(entry.key, entry);
+    for (const entry of items()) {
+      next.set(entry.key(), entry);
     }
 
     return next;
   });
 
-  const getParentKey = (key: MenuKey) => entriesByKey().get(key)?.parentKey;
+  const overflowedKeys = createMemo(() => {
+    if (!horizontal()) {
+      return new Set<MenuKey>();
+    }
+
+    return new Set<MenuKey>(overflowInfo().omittedKeys);
+  });
+
+  const isOverflowed = (entry: MenuEntry) =>
+    entry.parentKey() === undefined && overflowedKeys().has(entry.key());
+
+  const getEntry = (key: MenuKey) => entriesByKey().get(key);
+  const getParentKey = (key: MenuKey) => getEntry(key)?.parentKey();
 
   const getKeyPath = (key: MenuKey) => {
     const path: MenuKey[] = [];
@@ -160,42 +205,29 @@ export default function MenuRoot<T extends ValidComponent>(
     );
 
   const getFocusableEntries = (parentKey?: MenuKey) =>
-    entries()
-      .filter(
-        (entry) =>
-          entry.parentKey === parentKey && !entry.disabled() && !!entry.ref(),
-      )
-      .sort((a, b) => {
-        const aNode = a.ref();
-        const bNode = b.ref();
-
-        if (!aNode || !bNode || aNode === bNode) {
-          return 0;
-        }
-
-        const position = aNode.compareDocumentPosition(bNode);
-
-        if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
-          return -1;
-        }
-
-        if (position & Node.DOCUMENT_POSITION_PRECEDING) {
-          return 1;
-        }
-
-        return 0;
-      });
+    ordered().filter(
+      (entry) =>
+        entry.parentKey() === parentKey &&
+        !entry.disabled() &&
+        !isOverflowed(entry) &&
+        !!entry.ref(),
+    );
 
   const focusEntry = (entry: MenuEntry | undefined) => {
     if (!entry) {
       return false;
     }
+    const ele = entry.ref();
 
-    const focused = entry.focus();
-    if (focused) {
-      setActiveKey(entry.key);
+    if (ele) {
+      ele.focus();
+
+      if (document.activeElement === ele) {
+        setActiveKey(entry.key());
+        return true;
+      }
     }
-    return focused;
+    return false;
   };
 
   const focus: MenuRootContextValue["focus"] = (request) => {
@@ -204,7 +236,7 @@ export default function MenuRoot<T extends ValidComponent>(
         return false;
       }
 
-      const entry = entriesByKey().get(request.key);
+      const entry = getEntry(request.key);
       if (!entry || entry.disabled() || !entry.ref()) {
         return false;
       }
@@ -225,16 +257,17 @@ export default function MenuRoot<T extends ValidComponent>(
       return false;
     }
 
-    const currentEntry = entriesByKey().get(request.fromKey);
-    const siblings = getFocusableEntries(currentEntry?.parentKey);
+    const currentEntry = getEntry(request.fromKey);
+    const currentParentKey = currentEntry?.parentKey();
+    const siblings = getFocusableEntries(currentParentKey);
     const currentIndex = siblings.findIndex(
-      (entry) => entry.key === request.fromKey,
+      (entry) => entry.key() === request.fromKey,
     );
 
     if (currentIndex < 0) {
       return request.direction > 0
-        ? focus({ type: "first", parentKey: currentEntry?.parentKey })
-        : focus({ type: "last", parentKey: currentEntry?.parentKey });
+        ? focus({ type: "first", parentKey: currentParentKey })
+        : focus({ type: "last", parentKey: currentParentKey });
     }
 
     const nextIndex = currentIndex + request.direction;
@@ -261,13 +294,13 @@ export default function MenuRoot<T extends ValidComponent>(
 
     if (
       activeKey() !== undefined &&
-      topLevelEntries.some((entry) => entry.key === activeKey())
+      topLevelEntries.some((entry) => entry.key() === activeKey())
     ) {
       return focus({ type: "key", key: activeKey() });
     }
 
     const selectedEntry = topLevelEntries.find((entry) =>
-      isEntrySelected(entry.key),
+      isEntrySelected(entry.key()),
     );
     if (selectedEntry) {
       return focusEntry(selectedEntry);
@@ -396,35 +429,30 @@ export default function MenuRoot<T extends ValidComponent>(
     mode: () => local.mode,
     direction: () => local.direction,
     disabled: () => local.disabled,
-    selectable: () => local.selectable,
-    multiple: () => local.multiple,
-    loop: () => local.loop,
-    submenuTrigger: () => local.submenuTrigger,
+    popup: () => local.popup,
+    motion: () => local.motions?.[local.mode] ?? local.motion,
+
     selectedKeys,
     openKeys,
     activeKey,
+
     setActiveKey,
     registerEntry: (entry) => {
-      setEntries((prev) => {
-        const next = prev.filter((item) => item.id !== entry.id);
-
-        if (next.some((item) => item.key === entry.key)) {
-          warning(
-            `Duplicate menu key "${String(entry.key)}" detected. Menu keys must be unique.`,
-            {
-              package: "menu",
-              once: true,
-            },
-          );
-        }
-
-        return [...next, entry];
-      });
+      const key = untrack(entry.key);
+      const existing = untrack(() => getEntry(key));
+      if (existing && existing.uid !== entry.uid) {
+        warning(
+          `Duplicate menu key "${String(key)}" detected. Menu keys must be unique.`,
+          {
+            package: "menu",
+            once: true,
+          },
+        );
+      }
+      register(entry);
     },
-    unregisterEntry: (id) => {
-      setEntries((prev) => prev.filter((entry) => entry.id !== id));
-    },
-
+    unregisterEntry: unregister,
+    getEntry,
     focus,
     getKeyPath,
     isSelected: (key) => selectedKeys().includes(key),
@@ -440,14 +468,32 @@ export default function MenuRoot<T extends ValidComponent>(
 
   return (
     <MenuRootContext.Provider value={context}>
-      <Polymorphic<MenuRootElementProps>
-        as="div"
-        role={horizontal() ? "menubar" : "menu"}
-        tabIndex={0}
-        aria-orientation={horizontal() ? "horizontal" : "vertical"}
-        onKeyDown={composeHandlers(local.onKeyDown, handleKeyDown)}
-        {...rest}
-      />
+      <Show
+        when={horizontal()}
+        fallback={
+          <Polymorphic<MenuRootElementProps>
+            as="div"
+            role="menu"
+            tabIndex={0}
+            aria-orientation="vertical"
+            ref={mergeRefs(local.ref, setRootRef)}
+            onKeyDown={composeHandlers(local.onKeyDown, handleKeyDown)}
+            {...rest}
+          />
+        }
+      >
+        <OverflowRoot
+          dir={local.direction}
+          maxCount={registry.has(MEMU_MORE_UID) ? "responsive" : "invalidate"}
+          role="menubar"
+          tabIndex={0}
+          aria-orientation="horizontal"
+          ref={mergeRefs(local.ref, setRootRef)}
+          onOverflowChange={setOverflowInfo}
+          onKeyDown={composeHandlers(local.onKeyDown, handleKeyDown)}
+          {...rest}
+        />
+      </Show>
     </MenuRootContext.Provider>
   );
 }

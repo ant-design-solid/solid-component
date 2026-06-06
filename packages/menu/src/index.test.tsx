@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSignal } from "solid-js";
 import { mount, nextFrame } from "../../.test/render";
+import { measureElement } from "../../.test/resize-observer";
 import Menu from ".";
 
 afterEach(() => {
@@ -10,7 +11,7 @@ afterEach(() => {
 
 function queryByText(root: ParentNode, text: string) {
   return Array.from(root.querySelectorAll("*")).find(
-    node => node.textContent?.trim() === text,
+    (node) => node.textContent?.trim() === text,
   ) as HTMLElement | undefined;
 }
 
@@ -19,7 +20,7 @@ describe("Menu", () => {
     const { host, dispose } = mount(() => (
       <Menu.Root as="ul" defaultSelectedKeys={["home"]}>
         <Menu.Item as="li" key="home">
-          {state => (state.selected ? "Home selected" : "Home")}
+          {(state) => (state.selected ? "Home selected" : "Home")}
         </Menu.Item>
         <Menu.Item as="li" key="settings">
           Settings
@@ -43,8 +44,12 @@ describe("Menu", () => {
     const onSelectionChange = vi.fn();
 
     const { host, dispose } = mount(() => {
-      const [selectedKeys, setSelectedKeys] = createSignal<(string | number)[]>(["profile"]);
-      const [openKeys, setOpenKeys] = createSignal<(string | number)[]>(["account"]);
+      const [selectedKeys, setSelectedKeys] = createSignal<(string | number)[]>(
+        ["profile"],
+      );
+      const [openKeys, setOpenKeys] = createSignal<(string | number)[]>([
+        "account",
+      ]);
 
       return (
         <Menu.Root
@@ -58,7 +63,7 @@ describe("Menu", () => {
         >
           <Menu.Submenu key="account">
             <Menu.Item>
-              {state => (state.selected ? "Account selected" : "Account")}
+              {(state) => (state.selected ? "Account selected" : "Account")}
             </Menu.Item>
             <Menu.SubmenuContent>
               <Menu.Item key="profile">Profile</Menu.Item>
@@ -71,8 +76,12 @@ describe("Menu", () => {
 
     await nextFrame();
 
-    const trigger = host.querySelector('[data-menu-key="account"]') as HTMLElement;
-    const billing = host.querySelector('[data-menu-key="billing"]') as HTMLElement;
+    const trigger = host.querySelector(
+      '[data-menu-key="account"]',
+    ) as HTMLElement;
+    const billing = host.querySelector(
+      '[data-menu-key="billing"]',
+    ) as HTMLElement;
 
     expect(trigger.textContent).toContain("Account selected");
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
@@ -171,7 +180,9 @@ describe("Menu", () => {
     await nextFrame();
 
     const items = host.querySelectorAll('[role="menuitem"]');
-    const accountTrigger = host.querySelector('[data-menu-key="account"]') as HTMLElement;
+    const accountTrigger = host.querySelector(
+      '[data-menu-key="account"]',
+    ) as HTMLElement;
 
     (items[0] as HTMLElement).focus();
     await nextFrame();
@@ -252,7 +263,7 @@ describe("Menu", () => {
     const { host, dispose } = mount(() => (
       <Menu.Root mode="vertical">
         <Menu.Item key="home">
-          {state => (state.active ? "Home active" : "Home")}
+          {(state) => (state.active ? "Home active" : "Home")}
         </Menu.Item>
       </Menu.Root>
     ));
@@ -321,7 +332,9 @@ describe("Menu", () => {
 
     await nextFrame();
 
-    const trigger = host.querySelector('[data-menu-key="account"]') as HTMLElement;
+    const trigger = host.querySelector(
+      '[data-menu-key="account"]',
+    ) as HTMLElement;
     trigger.focus();
     await nextFrame();
 
@@ -341,8 +354,8 @@ describe("Menu", () => {
 
   it("opens popup submenu on click and closes after selection", async () => {
     const { host, dispose } = mount(() => (
-      <Menu.Root mode="vertical" submenuTrigger="click">
-        <Menu.Submenu key="account">
+      <Menu.Root mode="vertical">
+        <Menu.Submenu key="account" trigger="click">
           <Menu.Item>Account</Menu.Item>
           <Menu.SubmenuContent>
             <Menu.Item key="profile">Profile</Menu.Item>
@@ -353,13 +366,17 @@ describe("Menu", () => {
 
     await nextFrame();
 
-    const trigger = host.querySelector('[data-menu-key="account"]') as HTMLElement;
+    const trigger = host.querySelector(
+      '[data-menu-key="account"]',
+    ) as HTMLElement;
     trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextFrame();
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
-    const profile = host.querySelector('[data-menu-key="profile"]') as HTMLElement;
+    const profile = host.querySelector(
+      '[data-menu-key="profile"]',
+    ) as HTMLElement;
     profile.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextFrame();
 
@@ -390,4 +407,84 @@ describe("Menu", () => {
     dispose();
   });
 
+  it("renders overflowed top-level items inside Menu.More popup", async () => {
+    const { host, dispose } = mount(() => (
+      <Menu.Root
+        mode="horizontal"
+        style={{ display: "flex", position: "relative" }}
+      >
+        <Menu.Item key="a">A</Menu.Item>
+        <Menu.Item key="b">B</Menu.Item>
+        <Menu.Item key="c">C</Menu.Item>
+        <Menu.More>More</Menu.More>
+      </Menu.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.firstElementChild as HTMLElement;
+    await measureElement(root, 80);
+
+    for (const child of Array.from(root.children) as HTMLElement[]) {
+      await measureElement(child, child.textContent === "More" ? 20 : 30);
+    }
+    await nextFrame();
+
+    const more = queryByText(host, "More") as HTMLElement;
+    expect(more).toBeDefined();
+
+    more.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextFrame();
+
+    expect(queryByText(host, "A")).toBeDefined();
+    expect(queryByText(host, "B")).toBeDefined();
+    expect(queryByText(host, "C")).toBeDefined();
+
+    dispose();
+  });
+
+  it("skips overflowed top-level items when moving focus", async () => {
+    const { host, dispose } = mount(() => (
+      <Menu.Root
+        mode="horizontal"
+        style={{ display: "flex", position: "relative" }}
+      >
+        <Menu.Item key="a">A</Menu.Item>
+        <Menu.Item key="b">B</Menu.Item>
+        <Menu.Item key="c">C</Menu.Item>
+        <Menu.More>More</Menu.More>
+      </Menu.Root>
+    ));
+
+    await nextFrame();
+
+    const root = host.firstElementChild as HTMLElement;
+    await measureElement(root, 70);
+
+    for (const child of Array.from(root.children) as HTMLElement[]) {
+      await measureElement(child, child.textContent === "More" ? 20 : 30);
+    }
+    await nextFrame();
+
+    const first = host.querySelector('[data-menu-key="a"]') as HTMLElement;
+    const more = host.querySelector(
+      '[data-menu-key="__more__"]',
+    ) as HTMLElement;
+
+    first.focus();
+    await nextFrame();
+
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "ArrowRight",
+      }),
+    );
+    await nextFrame();
+
+    expect(document.activeElement).toBe(more);
+
+    dispose();
+  });
 });

@@ -1,17 +1,12 @@
-import { FloatingRoot } from "@solid-component/floating";
-import Polymorphic, {
-  ElementOf,
-  PolymorphicProps,
-} from "@solid-component/polymorphic";
+import { FloatingRoot, FloatingRootOwnProps } from "@solid-component/floating";
 import {
   createMemo,
   createUniqueId,
   mergeProps,
+  Show,
   splitProps,
-  ValidComponent,
   type JSX,
 } from "solid-js";
-import { Dynamic } from "solid-js/web";
 import {
   MenuSubmenuContentContext,
   MenuSubmenuContext,
@@ -19,30 +14,36 @@ import {
   useMenuSubmenuContext,
   type MenuSubmenuContextValue,
 } from "./MenuContext";
-import { MENU_POPUP_PLACEMENTS } from "./placements";
-import { MenuDirection, MenuMode, type MenuKey } from "./types";
+import { MENU_POPUP_PLACEMENTS, resolvePlacement } from "./placements";
+import { MenuMode, MenuPopupTrigger, type MenuKey } from "./types";
 
 export interface MenuSubmenuOwnProps {
   key: MenuKey;
   disabled?: boolean;
+  trigger?: MenuPopupTrigger;
+  stretch?: FloatingRootOwnProps["stretch"] | boolean;
 }
 
-interface MenuSubmenuCommonProps<
-  T extends HTMLElement = HTMLElement,
-> extends Pick<JSX.HTMLAttributes<T>, "children"> {}
+interface MenuSubmenuCommonProps {
+  children?: JSX.Element;
+}
 
-export interface MenuSubmenuProps<T extends ValidComponent>
-  extends MenuSubmenuOwnProps, MenuSubmenuCommonProps<ElementOf<T>> {}
+export interface MenuSubmenuProps
+  extends MenuSubmenuOwnProps, MenuSubmenuCommonProps {}
 
 const defaults = { disabled: false } as const;
-export default function MenuSubmenu<T extends ValidComponent>(
-  props: PolymorphicProps<T, MenuSubmenuProps<T>>,
-) {
+export default function MenuSubmenu(props: MenuSubmenuProps) {
   const root = useMenuRootContext();
   const parentSubmenu = useMenuSubmenuContext();
 
   const merged = mergeProps(defaults, props);
-  const [local, rest] = splitProps(merged, ["key", "disabled"]);
+  const [local, rest] = splitProps(merged, [
+    "key",
+    "disabled",
+    "children",
+    "trigger",
+    "stretch",
+  ]);
 
   const depth = createMemo(() =>
     parentSubmenu ? parentSubmenu.depth() + 1 : 1,
@@ -51,15 +52,19 @@ export default function MenuSubmenu<T extends ValidComponent>(
   const disabled = createMemo(() => root.disabled() || !!local.disabled);
   const open = createMemo(() => root.isOpen(local.key));
   const selected = createMemo(() => root.hasSelectedDescendant(local.key));
-  const contentId = createUniqueId();
-
-  const resolvePlacement = () => {
-    const rtl = root.direction() === MenuDirection.rtl;
-    if (root.mode() === MenuMode.horizontal && depth() === 1) {
-      return rtl ? "bottom-end" : "bottom-start";
+  const placement = createMemo(() =>
+    resolvePlacement(root.mode(), root.direction(), depth()),
+  );
+  const trigger = createMemo(() => local.trigger ?? root.popup().trigger);
+  const stretch = createMemo(() => {
+    if (typeof local.stretch === "string") return local.stretch;
+    if (local.stretch) {
+      return root.mode() === MenuMode.horizontal ? "minWidth" : undefined;
     }
-    return rtl ? "left" : "right";
-  };
+    return undefined;
+  });
+  const contentId = createUniqueId();
+  const renderInMore = () => <MenuSubmenu {...props} />;
 
   const setOpen = (next: boolean) => {
     if (disabled()) {
@@ -78,6 +83,7 @@ export default function MenuSubmenu<T extends ValidComponent>(
     open,
     selected,
     id: contentId,
+    renderInMore,
     setOpen,
     toggleOpen: () => setOpen(!open()),
   } satisfies MenuSubmenuContextValue;
@@ -85,25 +91,20 @@ export default function MenuSubmenu<T extends ValidComponent>(
   return (
     <MenuSubmenuContext.Provider value={context}>
       <MenuSubmenuContentContext.Provider value={false}>
-        <Dynamic
-          component={
-            isPopup()
-              ? (floatingProps: JSX.HTMLAttributes<HTMLDivElement>) => (
-                  <FloatingRoot
-                    open={open()}
-                    onOpenChange={setOpen}
-                    action={root.submenuTrigger()}
-                    placement={resolvePlacement()}
-                    placements={MENU_POPUP_PLACEMENTS}
-                    forceRender
-                    {...floatingProps}
-                  />
-                )
-              : Polymorphic
-          }
-          as="div"
-          {...rest}
-        />
+        <Show when={isPopup()} fallback={local.children}>
+          <FloatingRoot
+            open={open()}
+            onOpenChange={setOpen}
+            stretch={stretch()}
+            action={trigger()}
+            placement={placement()}
+            placements={MENU_POPUP_PLACEMENTS}
+            forceRender
+            {...rest}
+          >
+            {local.children}
+          </FloatingRoot>
+        </Show>
       </MenuSubmenuContentContext.Provider>
     </MenuSubmenuContext.Provider>
   );

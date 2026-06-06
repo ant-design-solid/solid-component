@@ -1,5 +1,7 @@
 import Basic from "./basic.tsx";
 import BasicSource from "./basic.tsx?code";
+import Overflow from "./overflow.tsx";
+import OverflowSource from "./overflow.tsx?code";
 
 Menu renders non-modal navigation structures with selectable items and nested submenus. Submenus can
 own popup behavior internally, while the root menu stays focused on navigation state and keyboard
@@ -13,4 +15,12 @@ movement.
   source={BasicSource}
 >
   <Basic />
+</DemoCard>
+
+<DemoCard
+  title="Overflow menu"
+  description="Collapse horizontal menu items into a More popup when space is constrained."
+  source={OverflowSource}
+>
+  <Overflow />
 </DemoCard>

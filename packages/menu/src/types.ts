@@ -1,4 +1,7 @@
+import { MotionOwnProps } from "@solid-component/motion";
 import { ValueOf } from "@solid-primitive/shared";
+import { ComponentProps, JSX } from "solid-js";
+import { Portal } from "solid-js/web";
 
 export type MenuKey = string | number;
 
@@ -10,12 +13,22 @@ export const MenuMode = {
 export type MenuMode = ValueOf<typeof MenuMode>;
 
 export const MenuDirection = {
-  ltr: 'ltr',
-  rtl: 'rtl',
-} as const
-export type MenuDirection = ValueOf<typeof MenuDirection>
+  ltr: "ltr",
+  rtl: "rtl",
+} as const;
+export type MenuDirection = ValueOf<typeof MenuDirection>;
 
-export type MenuSubmenuTrigger = "click" | "hover";
+export type MenuPopupTrigger = "click" | "hover";
+
+export type MenuMotionConfig = Omit<MotionOwnProps, "visible" | "children">;
+
+export interface MenuPopupOptions {
+  trigger?: MenuPopupTrigger;
+  class?: string | undefined;
+  style?: JSX.CSSProperties | string | undefined;
+  zIndex?: number;
+  portal?: boolean | Omit<ComponentProps<typeof Portal>, "children">;
+}
 
 export interface MenuInfo<TEvent extends Event = MouseEvent | KeyboardEvent> {
   key: MenuKey;

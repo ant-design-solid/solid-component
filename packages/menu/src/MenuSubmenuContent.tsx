@@ -1,21 +1,22 @@
-import { FloatingPopup, FloatingPopupProps } from "@solid-component/floating";
+import { FloatingPopup } from "@solid-component/floating";
 import Motion from "@solid-component/motion";
-import Polymorphic, {
+import {
   type ElementOf,
   type PolymorphicProps,
 } from "@solid-component/polymorphic";
 import { mergeStyle } from "@solid-component/utils";
-import { splitProps, type JSX, type ValidComponent } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Show, splitProps, type JSX, type ValidComponent } from "solid-js";
+import { Dynamic, Portal } from "solid-js/web";
 import {
   MenuSubmenuContentContext,
+  useMenuRootContext,
   useMenuSubmenuContext,
 } from "./MenuContext";
+import { MenuMotionConfig } from "./types";
 
-export interface MenuSubmenuContentOwnProps extends Pick<
-  FloatingPopupProps,
-  "motion"
-> {}
+export interface MenuSubmenuContentOwnProps {
+  motion?: MenuMotionConfig;
+}
 
 export interface MenuSubmenuContentCommonProps<
   T extends HTMLElement,
@@ -29,40 +30,75 @@ export interface MenuSubmenuContentProps<
     MenuSubmenuContentCommonProps<ElementOf<T>> {}
 
 function InternalInlineContent<T extends ValidComponent>(
-  props: PolymorphicProps<T, Pick<FloatingPopupProps, "motion">>,
+  props: PolymorphicProps<T, MenuSubmenuContentOwnProps>,
 ) {
-  const submenu = useMenuSubmenuContext(true);
-  const [local, rest] = splitProps(props, ["motion"]);
+  const { motion: rootMotion } = useMenuRootContext();
+  const { open } = useMenuSubmenuContext(true);
+  const [local, rest] = splitProps(props as MenuSubmenuContentOwnProps, [
+    "motion",
+  ]);
+  const motion = () => local.motion ?? rootMotion();
 
   return (
-    <Motion visible={submenu.open()} {...local.motion}>
-      <Polymorphic {...rest} />
-    </Motion>
+    <Motion
+      visible={open()}
+      as="ul"
+      role="menu"
+      tabIndex={-1}
+      aria-hidden={!open()}
+      hidden={!open()}
+      {...motion()}
+      {...rest}
+    />
+  );
+}
+
+interface MenuPopupContentProps
+  extends
+    MenuSubmenuContentOwnProps,
+    Pick<JSX.HTMLAttributes<HTMLElement>, "class" | "style" | "children"> {}
+
+export function MenuPopupContent(props: MenuPopupContentProps) {
+  const { popup, motion } = useMenuRootContext();
+  const [local, rest] = splitProps(props, ["motion", "style", "class"]);
+  const className = () =>
+    [popup().class, local.class].filter(Boolean).join(" ") || undefined;
+  const portal = () => {
+    const portal = popup().portal;
+    return portal === true ? {} : portal;
+  };
+
+  const view = () => (
+    <FloatingPopup
+      as="ul"
+      role="menu"
+      tabIndex={-1}
+      motion={local.motion ?? motion()}
+      zIndex={popup().zIndex}
+      style={mergeStyle(popup().style, local.style)}
+      class={className()}
+      {...rest}
+    />
+  );
+
+  return (
+    <Show when={portal()} fallback={view()}>
+      <Portal {...portal()}>{view()}</Portal>
+    </Show>
   );
 }
 
 export default function MenuSubmenuContent<T extends ValidComponent>(
   props: PolymorphicProps<T, MenuSubmenuContentProps<T>>,
 ) {
-  const submenu = useMenuSubmenuContext(true);
-  const [local, rest] = splitProps(props as MenuSubmenuContentProps, ["style"]);
+  const { id, isPopup } = useMenuSubmenuContext(true);
 
   return (
     <MenuSubmenuContentContext.Provider value={true}>
       <Dynamic
-        component={submenu.isPopup() ? FloatingPopup : InternalInlineContent}
-        as="div"
-        id={submenu.id}
-        role="menu"
-        tabIndex={-1}
-        aria-hidden={!submenu.open()}
-        style={
-          submenu.isPopup()
-            ? mergeStyle({ position: "fixed" }, local.style)
-            : local.style
-        }
-        hidden={!submenu.open() && !submenu.isPopup()}
-        {...rest}
+        component={isPopup() ? MenuPopupContent : InternalInlineContent}
+        id={id}
+        {...props}
       />
     </MenuSubmenuContentContext.Provider>
   );

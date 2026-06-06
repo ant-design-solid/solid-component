@@ -1,7 +1,20 @@
 import type { FloatingPlacements } from "@solid-component/floating";
+import { MenuDirection, MenuMode } from "./types";
+
+export const resolvePlacement = (
+  mode: MenuMode,
+  direction: MenuDirection,
+  depth: number,
+) => {
+  const rtl = direction === MenuDirection.rtl;
+  if (mode === MenuMode.horizontal && depth === 1) {
+    return rtl ? "bottom-end" : "bottom-start";
+  }
+  return rtl ? "left" : "right";
+};
 
 export const MENU_POPUP_PLACEMENTS = {
-  "right": {
+  right: {
     points: ["tl", "tr"],
     offset: [4, 0],
     overflow: {
@@ -9,7 +22,7 @@ export const MENU_POPUP_PLACEMENTS = {
       adjustY: true,
     },
   },
-  "left": {
+  left: {
     points: ["tr", "tl"],
     offset: [-4, 0],
     overflow: {

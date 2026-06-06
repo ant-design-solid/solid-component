@@ -64,14 +64,10 @@ export default function BasicDemo() {
 
         <Menu.Submenu key="account">
           <Menu.Item>
-            {(state) => (
-              <span class="sc-menu__label">
-                Account
-                <span class="sc-menu__indicator">
-                  {state.open ? "Open" : "Closed"}
-                </span>
-              </span>
-            )}
+            <span class="sc-menu__label">
+              <span>Account</span>
+              <span class="sc-menu__indicator">Submenu</span>
+            </span>
           </Menu.Item>
           <Menu.SubmenuContent>
             <Menu.Item key="profile">Profile</Menu.Item>
@@ -82,14 +78,10 @@ export default function BasicDemo() {
 
         <Menu.Submenu key="workspace">
           <Menu.Item>
-            {(state) => (
-              <span class="sc-menu__label">
-                Workspace
-                <span class="sc-menu__indicator">
-                  {state.open ? "Open" : "Closed"}
-                </span>
-              </span>
-            )}
+            <span class="sc-menu__label">
+              <span>Workspace</span>
+              <span class="sc-menu__indicator">Submenu</span>
+            </span>
           </Menu.Item>
           <Menu.SubmenuContent>
             <Menu.Item key="members">Members</Menu.Item>

@@ -1,11 +1,12 @@
-import { error } from "@solid-component/utils";
-import { createContext, useContext, type Accessor } from "solid-js";
+import { error, OrderedRegistryRecord } from "@solid-component/utils";
+import { createContext, useContext, type Accessor, type JSX } from "solid-js";
 import type {
   MenuActionInfo,
   MenuDirection,
   MenuKey,
   MenuMode,
-  MenuSubmenuTrigger,
+  MenuMotionConfig,
+  MenuPopupOptions,
 } from "./types";
 
 export interface MenuFocusRequest {
@@ -16,19 +17,18 @@ export interface MenuFocusRequest {
   direction?: 1 | -1;
 }
 
-export interface MenuEntry {
-  id: string;
-  key: MenuKey;
-  parentKey: MenuKey | undefined;
+export interface MenuEntry extends Omit<OrderedRegistryRecord, "index"> {
+  key: Accessor<MenuKey>;
+  parentKey: Accessor<MenuKey | undefined>;
   disabled: Accessor<boolean>;
-  ref: Accessor<HTMLElement | undefined>;
-  focus: (options?: FocusOptions) => boolean;
+  renderInMore?: () => JSX.Element;
 }
 
 export interface MenuSubmenuContextValue {
   id: string;
   key: Accessor<MenuKey>;
   parentKey: Accessor<MenuKey | undefined>;
+  renderInMore: () => JSX.Element;
   isPopup: Accessor<boolean>;
   depth: Accessor<number>;
   disabled: Accessor<boolean>;
@@ -42,17 +42,17 @@ export interface MenuRootContextValue {
   mode: Accessor<MenuMode>;
   direction: Accessor<MenuDirection>;
   disabled: Accessor<boolean>;
-  selectable: Accessor<boolean>;
-  multiple: Accessor<boolean>;
-  loop: Accessor<boolean>;
+  popup: Accessor<MenuPopupOptions>;
+  motion: Accessor<MenuMotionConfig | undefined>;
 
-  submenuTrigger: Accessor<MenuSubmenuTrigger>;
   selectedKeys: Accessor<MenuKey[]>;
   openKeys: Accessor<MenuKey[]>;
   activeKey: Accessor<MenuKey | undefined>;
+
   setActiveKey: (key: MenuKey | undefined) => void;
   registerEntry: (entry: MenuEntry) => void;
-  unregisterEntry: (id: string) => void;
+  unregisterEntry: (id: MenuEntry['uid']) => void;
+  getEntry: (key: MenuKey) => MenuEntry | undefined;
   focus: (request: MenuFocusRequest) => boolean;
   getKeyPath: (key: MenuKey) => MenuKey[];
   isSelected: (key: MenuKey) => boolean;
@@ -66,6 +66,7 @@ export interface MenuRootContextValue {
 export const MenuRootContext = createContext<MenuRootContextValue>();
 export const MenuSubmenuContext = createContext<MenuSubmenuContextValue>();
 export const MenuSubmenuContentContext = createContext(false);
+export const MenuOverflowPopupContext = createContext(false);
 
 export function useMenuRootContext() {
   const context = useContext(MenuRootContext);
@@ -97,4 +98,8 @@ export function useMenuSubmenuContext<T extends false | true>(
 
 export function useMenuSubmenuContentContext() {
   return useContext(MenuSubmenuContentContext);
+}
+
+export function useMenuOverflowPopupContext() {
+  return useContext(MenuOverflowPopupContext);
 }

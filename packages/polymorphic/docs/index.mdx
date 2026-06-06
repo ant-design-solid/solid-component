@@ -62,17 +62,3 @@ export default function Example() {
 ## API overview
 
 <PackageApiTable packageName="polymorphic" />
-
-## Notes
-
-- `as` is optional in the type layer but required by runtime behavior unless the caller sets a default.
-- Prop passthrough does not add semantic fixes. Rendering as `a` does not magically make `disabled`
-  meaningful.
-- The package is intentionally small. Styling, accessibility adjustments and interaction policies
-  belong in the higher-level component you build on top of it.
-
-<Callout tone="note" title="Keep it low-level">
-  If you find yourself adding behavior, variants and accessibility fixes directly into
-  `Polymorphic`, you are likely moving responsibility into the wrong layer. Keep this primitive
-  narrow and compose richer components on top.
-</Callout>
