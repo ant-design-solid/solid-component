@@ -1,16 +1,4 @@
-export { access, tryOnCleanup, type MaybeAccessor, type Assign } from "@solid-primitive/shared";
-import { JSX, Ref } from "solid-js";
-
-
-type MaybeRef<T> = Ref<T> | undefined;
-
-export function mergeRefs<T>(...refs: MaybeRef<T>[]): (el: T) => void {
-  return (...args) => {
-    for (const ref of refs) {
-      ref && (ref as any)(...args);
-    }
-  };
-}
+import { JSX } from "solid-js";
 
 const extractCSSregex = /((?:--)?(?:\w+-?)+)\s*:\s*([^;]*)/g;
 
@@ -29,7 +17,11 @@ export function mergeStyle<
 >(
   a: K1,
   b: K2,
-): K1 extends string ? (K2 extends string ? string : JSX.CSSProperties) : JSX.CSSProperties {
+): K1 extends string
+  ? K2 extends string
+    ? string
+    : JSX.CSSProperties
+  : JSX.CSSProperties {
   const aIsString = typeof a === "string";
   const bIsString = typeof b === "string";
   if (aIsString && bIsString) return `${a};${b}` as any;

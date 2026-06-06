@@ -1,1 +1,2 @@
-export * from './createControllableSignal'
+export * from "./createControllableSignal";
+export * from "./createOrderedRegistry";
