@@ -1,11 +1,10 @@
 import { error } from "@solid-component/utils";
+import type { RequiredBy } from "@solid-primitive/utils";
 import { Accessor, createContext, useContext } from "solid-js";
 
 export type FieldHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
 type OverflowFormatter = (value: string, options: { max: number }) => string;
-
-type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
 export interface CounterConfig {
   max?: number;

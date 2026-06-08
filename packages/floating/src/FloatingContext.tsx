@@ -1,6 +1,7 @@
 import { createContext, useContext, type Accessor } from "solid-js";
 import type { MotionOwnProps } from "@solid-component/motion";
 import createHasAction from "./hooks/createHasAction";
+import { error } from "@solid-component/utils";
 
 export type AlignPointTopBottom = "t" | "b" | "c";
 export type AlignPointLeftRight = "l" | "r" | "c";
@@ -82,18 +83,23 @@ export interface FloatingContextValue {
   hasAction: ReturnType<typeof createHasAction>;
   setPointerPoint: (x: number, y: number) => void;
   rootOptions: Accessor<FloatingRootOptions>;
+  registerSubPopup: (id: string, el: HTMLElement | null) => void;
   contains: (ele: EventTarget) => boolean;
 }
 
 export const FloatingContext = createContext<FloatingContextValue>();
 
+export function useOptionalFloatingContext() {
+  return useContext(FloatingContext);
+}
+
 export function useFloatingContext() {
-  const context = useContext(FloatingContext);
+  const context = useOptionalFloatingContext();
 
   if (!context) {
-    throw new Error(
-      "[diagen]: Floating components must be used within <FloatingRoot>.",
-    );
+    error("Floating components must be used within <FloatingRoot>.", {
+      package: "floating",
+    });
   }
 
   return context;

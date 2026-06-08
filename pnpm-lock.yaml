@@ -6,12 +6,6 @@ settings:
 
 catalogs:
   dev:
-    '@solid-primitive/shared':
-      specifier: ^0.1.0-beta.3
-      version: 0.1.0-beta.3
-    '@solid-primitive/web':
-      specifier: ^0.1.0-beta.1
-      version: 0.1.0-beta.1
     solid-js:
       specifier: ^1.9.5
       version: 1.9.11
@@ -83,12 +77,6 @@ importers:
       '@mdx-js/rollup':
         specifier: catalog:docs
         version: 3.1.1(rollup@4.59.0)
-      '@solid-primitive/shared':
-        specifier: catalog:dev
-        version: 0.1.0-beta.3(solid-js@1.9.11)
-      '@solid-primitive/web':
-        specifier: catalog:dev
-        version: 0.1.0-beta.1(solid-js@1.9.11)
       '@solidjs/router':
         specifier: catalog:docs
         version: 0.15.4(solid-js@1.9.11)
@@ -179,6 +167,15 @@ importers:
       '@solid-component/utils':
         specifier: workspace:^
         version: link:../utils
+      '@solid-primitive/resize-observer':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -194,6 +191,21 @@ importers:
       '@solid-component/utils':
         specifier: workspace:^
         version: link:../utils
+      '@solid-primitive/element-geometry':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/event-listener':
+        specifier: 0.1.0-beta.3
+        version: 0.1.0-beta.3(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/set':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -215,6 +227,9 @@ importers:
       '@solid-component/utils':
         specifier: workspace:^
         version: link:../utils
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -227,6 +242,18 @@ importers:
       '@solid-component/utils':
         specifier: workspace:^
         version: link:../utils
+      '@solid-primitive/event-listener':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)
+      '@solid-primitive/motion':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -239,12 +266,24 @@ importers:
       '@solid-component/utils':
         specifier: workspace:^
         version: link:../utils
+      '@solid-primitive/resize-observer':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
 
   packages/polymorphic:
     dependencies:
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -263,6 +302,15 @@ importers:
 
   packages/utils:
     dependencies:
+      '@solid-primitive/map':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
       solid-js:
         specifier: ^1.6.5
         version: 1.9.11
@@ -1342,15 +1390,57 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
-  '@solid-primitive/shared@0.1.0-beta.3':
-    resolution: {integrity: sha512-nOOK5gd70pa3fmYY8khHgIXxwR2qhURuYji93qBEisocUqFi4XPQjDb2tURxqjLtumk4gjyqFCrwmXQq+CeRjg==}
+  '@solid-primitive/element-geometry@0.1.0-beta.1':
+    resolution: {integrity: sha512-H4yIXfqTaUO5XY2SWFvuOZ/OSqWga2GwQUe5enlAsHLwVIzraEmm50Ms9SUoSeV8zZt0nH2br92pxEJMmlnjeg==}
     peerDependencies:
       solid-js: ^1.9.11
 
-  '@solid-primitive/web@0.1.0-beta.1':
-    resolution: {integrity: sha512-qTaPDe51h2FispePvM8xp7wmB4TD82hIVzIBAypkdOkNQcZ9kR1Aqu4V/e3f0ASJP2vrHaWB4CZVdD6+2LJoNQ==}
+  '@solid-primitive/event-listener@0.1.0-beta.1':
+    resolution: {integrity: sha512-6eCfp8UsieyBgpOBi8nwS7D3NP9NUsZgMkcBL9lqxtBzWocP7odQvZJ8pohyBQDa2rmd7icDcBHFYWJVzDmAgA==}
     peerDependencies:
-      solid-js: ^1.6.12
+      '@solid-primitive/utils': ^0.1.0-beta.1
+      solid-js: ^1.9.11
+
+  '@solid-primitive/event-listener@0.1.0-beta.3':
+    resolution: {integrity: sha512-r0+yU1untQuq22QsxI+5sODSfqyGxll9NXWgUJmu7YklHpuwDYajXcvZMiL+n4jud5TZZaOF6Vg6MJ59uJ0W4Q==}
+    peerDependencies:
+      '@solid-primitive/utils': ^0.1.0-beta.1
+      solid-js: ^1.9.11
+
+  '@solid-primitive/map@0.1.0-beta.1':
+    resolution: {integrity: sha512-Lr/vhzA0JCm6Mbarok3XqDHIWvo768YDWmVoB0ZdMT25Qo2KM/6VAUkfmF7B3W9duj3Y+cfpbye8wCSw6EMZjg==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/motion@0.1.0-beta.1':
+    resolution: {integrity: sha512-XRjIoTbhKqycMic906zgC5ARkJfoU9AVQLHbHXX4DHbrB7JCPTd/I5aRmkbVxQqsGC68YSKJVmKYRyiOH1pFJg==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/resize-observer@0.1.0-beta.1':
+    resolution: {integrity: sha512-LfW8dzxsKfo1Elxhd26NrmGGrQMkvHfiFoPIyl5y7XZi0bQLeFGLnN659oQwJlVIIQfYXdI5UV1SeQ3vwijKtg==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/scheduler@0.1.0-beta.1':
+    resolution: {integrity: sha512-dwmPjkVsJqXA5iVHrysByd8TCatNxxfi4UPFoYy7dxTLFgel81fzZUheWIYhQ++1zdGNMGql8YImhSV6fctZRA==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/set@0.1.0-beta.1':
+    resolution: {integrity: sha512-rEGrIk4PQAk1zxSFjebbpSX0vBDiil9Dp90sZb6XHtezAVug/+v+bZCTlBUEmmeKcYutxzUQ/K3+bQnB5mX3aw==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/trigger@0.1.0-beta.1':
+    resolution: {integrity: sha512-O6nmRQ6G5XFdMKedMkRQ7WpIsvDk4rmez9R0xX3EWQJJtCBDEXAN196KvuOlAtjaZeJQ2o8kQ8wDRN1Cdt2twA==}
+    peerDependencies:
+      solid-js: ^1.9.11
+
+  '@solid-primitive/utils@0.1.0-beta.1':
+    resolution: {integrity: sha512-CjH87li17YaQyyK1zb4xx6b8EahmhADCIzGlYbr9OuTmxIAKutlaodc6bprjywhYqRZEmGWkURja9oHL33HjWA==}
+    peerDependencies:
+      solid-js: ^1.9.11
 
   '@solidjs/meta@0.29.4':
     resolution: {integrity: sha512-zdIWBGpR9zGx1p1bzIPqF5Gs+Ks/BH8R6fWhmUa/dcK1L2rUC8BAcZJzNRYBQv74kScf1TSOs0EY//Vd/I0V8g==}
@@ -4925,13 +5015,55 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@solid-primitive/shared@0.1.0-beta.3(solid-js@1.9.11)':
+  '@solid-primitive/element-geometry@0.1.0-beta.1(solid-js@1.9.11)':
     dependencies:
+      '@solid-primitive/event-listener': 0.1.0-beta.3(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)
+      '@solid-primitive/resize-observer': 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
       solid-js: 1.9.11
 
-  '@solid-primitive/web@0.1.0-beta.1(solid-js@1.9.11)':
+  '@solid-primitive/event-listener@0.1.0-beta.1(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)':
     dependencies:
-      '@solid-primitive/shared': 0.1.0-beta.3(solid-js@1.9.11)
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/event-listener@0.1.0-beta.3(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/map@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/trigger': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/motion@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/resize-observer@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/scheduler@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/set@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/trigger': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/trigger@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
+      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js: 1.9.11
+
+  '@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11)':
+    dependencies:
       solid-js: 1.9.11
 
   '@solidjs/meta@0.29.4(solid-js@1.9.11)':

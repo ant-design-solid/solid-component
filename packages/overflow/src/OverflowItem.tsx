@@ -2,9 +2,10 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { makeRaf, mergeRefs, mergeStyle } from "@solid-component/utils";
-import { ValueOf } from "@solid-primitive/shared";
-import { createResizeObserver } from "@solid-primitive/web";
+import { mergeRefs, mergeStyle } from "@solid-component/utils";
+import { createResizeObserver } from "@solid-primitive/resize-observer";
+import { makeRaf } from "@solid-primitive/scheduler";
+import { ValueOf } from "@solid-primitive/utils";
 import {
   createMemo,
   createSignal,

@@ -1,4 +1,4 @@
-import { KeyOf, ValueOf } from "@solid-primitive/shared";
+import { KeyOf, ValueOf } from "@solid-primitive/utils";
 import {
   Accessor,
   createEffect,

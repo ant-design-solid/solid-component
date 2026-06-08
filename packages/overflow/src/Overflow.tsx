@@ -1,5 +1,5 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
-import { ValueOf } from "@solid-primitive/shared";
+import { ValueOf } from "@solid-primitive/utils";
 import { JSX, Show, splitProps, ValidComponent } from "solid-js";
 import OverflowItem from "./OverflowItem";
 import OverflowItems, { OverflowItemsOwnProps } from "./OverflowItems";

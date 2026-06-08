@@ -87,11 +87,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "FloatingPopup.tsx"
     },
     {
-      "name": "FloatingPortal",
-      "kind": "component",
-      "source": "index.tsx"
-    },
-    {
       "name": "FloatingRoot",
       "kind": "component",
       "source": "FloatingRoot.tsx"
@@ -147,11 +142,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "FloatingPopup.tsx"
     },
     {
-      "name": "FloatingPortalProps",
-      "kind": "type",
-      "source": "FloatingPortal.tsx"
-    },
-    {
       "name": "FloatingPositionState",
       "kind": "type",
       "source": "FloatingContext.tsx"
@@ -182,11 +172,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "MenuDivider",
       "kind": "component",
       "source": "MenuDivider.tsx"
-    },
-    {
-      "name": "MenuGroup",
-      "kind": "component",
-      "source": "MenuGroup.tsx"
     },
     {
       "name": "MenuItem",
@@ -222,16 +207,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "MenuDividerProps",
       "kind": "type",
       "source": "MenuDivider.tsx"
-    },
-    {
-      "name": "MenuGroupOwnProps",
-      "kind": "type",
-      "source": "MenuGroup.tsx"
-    },
-    {
-      "name": "MenuGroupProps",
-      "kind": "type",
-      "source": "MenuGroup.tsx"
     },
     {
       "name": "MenuInfo",
@@ -642,19 +617,9 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
   ],
   "utils": [
     {
-      "name": "access",
-      "kind": "function",
-      "source": "utils/solid.d.ts"
-    },
-    {
       "name": "callHandler",
       "kind": "function",
-      "source": "events.ts"
-    },
-    {
-      "name": "canUseDom",
-      "kind": "function",
-      "source": "dom/index.ts"
+      "source": "solid/events.ts"
     },
     {
       "name": "Color",
@@ -664,7 +629,7 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
     {
       "name": "composeHandlers",
       "kind": "function",
-      "source": "events.ts"
+      "source": "solid/events.ts"
     },
     {
       "name": "createControllableSignal",
@@ -682,14 +647,9 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "warn.ts"
     },
     {
-      "name": "getDOM",
+      "name": "getShadowRoot",
       "kind": "function",
-      "source": "dom/index.ts"
-    },
-    {
-      "name": "isDOM",
-      "kind": "function",
-      "source": "dom/index.ts"
+      "source": "dom/shadow.ts"
     },
     {
       "name": "isVisible",
@@ -697,19 +657,14 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "dom/isVisible.ts"
     },
     {
-      "name": "makeRaf",
-      "kind": "function",
-      "source": "raf.ts"
-    },
-    {
       "name": "mergeRefs",
       "kind": "function",
-      "source": "solid.ts"
+      "source": "solid/ref.ts"
     },
     {
       "name": "mergeStyle",
       "kind": "function",
-      "source": "solid.ts"
+      "source": "solid/style.ts"
     },
     {
       "name": "triggerFocus",
@@ -717,20 +672,9 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "dom/focus.ts"
     },
     {
-      "name": "tryOnCleanup",
-      "kind": "function",
-      "description": "不在组件内运行时会报错",
-      "source": "utils/solid.d.ts"
-    },
-    {
       "name": "warning",
       "kind": "function",
       "source": "warn.ts"
-    },
-    {
-      "name": "Assign",
-      "kind": "type",
-      "source": "utils/type.d.ts"
     },
     {
       "name": "ColorFormat",
@@ -761,11 +705,6 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "name": "HSV",
       "kind": "type",
       "source": "color/types.ts"
-    },
-    {
-      "name": "MaybeAccessor",
-      "kind": "type",
-      "source": "utils/solid.d.ts"
     },
     {
       "name": "OrderedRegistryRecord",

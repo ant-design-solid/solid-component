@@ -1,5 +1,5 @@
 import { MotionOwnProps } from "@solid-component/motion";
-import { ValueOf } from "@solid-primitive/shared";
+import { ValueOf } from "@solid-primitive/utils";
 import { ComponentProps, JSX } from "solid-js";
 import { Portal } from "solid-js/web";
 

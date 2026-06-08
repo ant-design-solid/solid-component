@@ -1,4 +1,4 @@
-import { access, AnyFunction, MaybeAccessor } from "@solid-primitive/shared";
+import { access, AnyFunction, MaybeAccessor } from "@solid-primitive/utils";
 import { Accessor, createMemo, createSignal, untrack } from "solid-js";
 
 export interface CreateControllableSignalProps<T> {

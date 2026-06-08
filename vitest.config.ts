@@ -1,12 +1,21 @@
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vitest/config";
-import { internalPackageSource } from "./build-plugins/internal-package-source";
 
 export default defineConfig({
-  plugins: [internalPackageSource(), solid({ hot: !process.env.VITEST })],
+  plugins: [solid({ hot: !process.env.VITEST })],
   resolve: {
-    alias: {},
+    alias: [
+      {
+        find: /^@solid-component\/([^/]+)$/,
+        replacement: join(
+          fileURLToPath(new URL("./packages", import.meta.url)),
+          "$1",
+          "src",
+        ),
+      },
+    ],
     dedupe: ["solid-js"],
   },
   cacheDir: resolve(import.meta.dirname, "node_modules/.vite"),
@@ -37,11 +46,7 @@ export default defineConfig({
           exclude: ["packages/**/*.{browser,server}.{test,spec}.{ts,tsx}"],
           server: {
             deps: {
-              inline: [
-                "solid-js",
-                "@solid-primitive/shared",
-                "@solid-primitive/web",
-              ],
+              inline: ["solid-js", "@solid-primitive"],
             },
           },
         },

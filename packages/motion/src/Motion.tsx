@@ -3,8 +3,10 @@ import {
   Polymorphic,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import { access, makeRaf, mergeRefs, mergeStyle } from "@solid-component/utils";
-import { createSwitchMotion } from "@solid-primitive/web";
+import { access } from "@solid-primitive/utils";
+import { mergeRefs, mergeStyle } from "@solid-component/utils";
+import { createSwitchMotion } from "@solid-primitive/motion";
+import { makeRaf } from "@solid-primitive/scheduler";
 import {
   createMemo,
   createSignal,
@@ -49,7 +51,7 @@ export interface MotionOwnProps
   leavedClassName?: string;
   deadline?: number;
   forceRender?: boolean;
-  onVisibleChanged?: (visible: boolean) => void;
+  onVisibleChangeEnd?: (visible: boolean) => void;
   children?: JSX.Element;
 }
 
@@ -74,7 +76,6 @@ const idleState = (hidden: boolean): MotionState => ({
 });
 
 const defaults = {
-  as: "div",
   appear: true,
   enter: true,
   leave: true,
@@ -85,7 +86,6 @@ export default function Motion<T extends ValidComponent>(
 ) {
   const merged = mergeProps(defaults, props as MotionProps);
   const [local, others] = splitProps(merged, [
-    "as",
     "visible",
     "name",
     "appear",
@@ -99,7 +99,7 @@ export default function Motion<T extends ValidComponent>(
     "class",
     "style",
     "children",
-    "onVisibleChanged",
+    "onVisibleChangeEnd",
 
     "onAppearPrepare",
     "onAppearStart",
@@ -115,15 +115,14 @@ export default function Motion<T extends ValidComponent>(
     "onLeaveEnd",
   ]);
 
-  const initialVisible = access(local.visible);
-  const shouldAppear = !!initialVisible && local.appear;
+  const shouldAppear = !!local.visible && local.appear;
   let hasAppeared = !shouldAppear;
 
   const [elRef, setElRef] = createSignal<HTMLElement>();
   const [motionState, setMotionState] = createSignal<MotionState>(
-    idleState(!initialVisible),
+    idleState(!local.visible),
   );
-  const [hasBeenVisible, setHasBeenVisible] = createSignal(initialVisible);
+  const [hasBeenVisible, setHasBeenVisible] = createSignal(local.visible);
 
   const isMoving = createMemo(() => motionState().phase !== "none");
   const isLeaved = createMemo(() => !isMoving() && motionState().hidden);
@@ -131,7 +130,7 @@ export default function Motion<T extends ValidComponent>(
   const setIdle = (hidden: boolean, notifyVisibleChanged = false) => {
     setMotionState(idleState(hidden));
     if (notifyVisibleChanged) {
-      local.onVisibleChanged?.(!hidden);
+      local.onVisibleChangeEnd?.(!hidden);
     }
   };
 
@@ -252,7 +251,7 @@ export default function Motion<T extends ValidComponent>(
   return (
     <Show when={shouldRender()}>
       <Polymorphic<MotionOwnProps>
-        as={local.as}
+        as="div"
         ref={mergeRefs(local.ref, setElRef)}
         {...attrs()}
         {...others}

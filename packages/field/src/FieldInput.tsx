@@ -1,13 +1,12 @@
 import Polymorphic, { PolymorphicProps } from "@solid-component/polymorphic";
 import { callHandler, mergeRefs } from "@solid-component/utils";
-import { ValueOf } from "@solid-primitive/shared";
+import { ValueOf } from "@solid-primitive/utils";
 import {
   createEffect,
   createSignal,
   JSX,
-  mergeProps,
   splitProps,
-  untrack,
+  untrack
 } from "solid-js";
 import { useFieldContext, type FieldHTMLElement } from "./FieldContext";
 

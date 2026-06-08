@@ -1,6 +1,6 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
-import { makeRaf } from "@solid-component/utils";
-import { createResizeObserver } from "@solid-primitive/web";
+import { makeRaf } from "@solid-primitive/scheduler";
+import { createResizeObserver } from "@solid-primitive/resize-observer";
 import { createEffect, createMemo, JSX, splitProps } from "solid-js";
 import { useFieldContext } from "./FieldContext";
 import { FieldBaseInput, FieldBaseInputOwnProps } from "./FieldInput";

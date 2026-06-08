@@ -7,11 +7,13 @@ import {
   createSignal,
   createUniqueId,
   mergeProps,
+  onCleanup,
   type JSX,
 } from "solid-js";
 import {
   FloatingContext,
   FloatingDelay,
+  useOptionalFloatingContext,
   type FloatingContextValue,
   type FloatingPlacements,
   type FloatingRootOptions,
@@ -44,6 +46,7 @@ const defaults = {
   placements: {} as FloatingPlacements,
 } as const;
 export default function FloatingRoot(props: FloatingRootProps) {
+  const parentContext = useOptionalFloatingContext();
   const merged = mergeProps(defaults, props);
   const [open, _setOpen] = createControllableSignal({
     value: () => merged.open,
@@ -68,9 +71,9 @@ export default function FloatingRoot(props: FloatingRootProps) {
   );
 
   const hasAction = createHasAction(
-    createMemo(() => merged.action),
-    createMemo(() => merged.showAction),
-    createMemo(() => merged.hideAction),
+    () => merged.action,
+    () => merged.showAction,
+    () => merged.hideAction,
   );
 
   const delayInvoke = useDelay();
@@ -100,28 +103,52 @@ export default function FloatingRoot(props: FloatingRootProps) {
       }) satisfies FloatingRootOptions,
   );
 
+  const id = createUniqueId();
+  const subPopups = new Map<string, HTMLElement>();
   const context = {
-    id: createUniqueId(),
+    id,
     open,
     setOpen,
     triggerRef,
     setTriggerRef,
     popupRef,
-    setPopupRef,
+    setPopupRef: (el) => {
+      setPopupRef(el);
+
+      if (parentContext) {
+        parentContext.registerSubPopup(id, el ?? null);
+
+        onCleanup(() => {
+          parentContext.registerSubPopup(id, null);
+        });
+      }
+    },
     position,
     reposition,
     hasAction,
     setPointerPoint: (x: number, y: number) => setPointerPoint([x, y]),
     rootOptions,
+    registerSubPopup(id, ele) {
+      if (ele) {
+        subPopups.set(id, ele);
+      } else {
+        subPopups.delete(id);
+      }
+
+      parentContext?.registerSubPopup(id, ele);
+    },
     contains: (ele) => {
       const triggerEle = triggerRef();
       const popupEle = popupRef();
+      const isContain = (parent?: Node) =>
+        parent?.contains(ele as Node) || ele === parent;
+
       return (
-        triggerEle?.contains(ele as Node) ||
+        isContain(triggerEle) ||
         (triggerEle && getShadowRoot(triggerEle)?.host === ele) ||
-        ele === triggerEle ||
-        popupEle?.contains(ele as Node) ||
-        ele === popupEle
+        isContain(popupEle) ||
+        (popupEle && getShadowRoot(popupEle)?.host === ele) ||
+        subPopups.values().some((subPopupEl) => isContain(subPopupEl))
       );
     },
   } satisfies FloatingContextValue;

@@ -5,7 +5,7 @@ import {
   composeHandlers,
   mergeRefs,
 } from "@solid-component/utils";
-import { ValueOf } from "@solid-primitive/shared";
+import { ValueOf } from "@solid-primitive/utils";
 import { splitProps, type JSX, type ValidComponent } from "solid-js";
 import { useFloatingContext } from "./FloatingContext";
 

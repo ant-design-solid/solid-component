@@ -7,20 +7,20 @@ import {
   mergeStyle,
   warning,
 } from "@solid-component/utils";
+import { createElementSize } from "@solid-primitive/element-geometry";
 import {
-  createElementSize,
   makeEventListener,
   onClickOutside,
-} from "@solid-primitive/web";
+} from "@solid-primitive/event-listener";
 import {
   createEffect,
   createMemo,
   DEV,
+  JSX,
   splitProps,
   untrack,
-  ValidComponent,
+  ValidComponent
 } from "solid-js";
-import type { JSX } from "solid-js/jsx-runtime";
 import type { FloatingMotionConfig } from "./FloatingContext";
 import { useFloatingContext } from "./FloatingContext";
 import useEscKeyDown from "./hooks/useEscKeyDown";
@@ -82,8 +82,8 @@ export default function FloatingPopup<T extends ValidComponent>(
         await reposition();
         return motion.onEnterPrepare?.(...args);
       },
-      onVisibleChanged: (visible) => {
-        motion.onVisibleChanged?.(visible);
+      onVisibleChangeEnd: (visible) => {
+        motion.onVisibleChangeEnd?.(visible);
         if (visible) {
           requestAnimationFrame(() => {
             void reposition();

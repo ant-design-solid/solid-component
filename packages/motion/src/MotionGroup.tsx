@@ -1,6 +1,7 @@
 import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
-import { isObject } from "@solid-primitive/shared";
-import { createListMotion } from "@solid-primitive/web";
+import { error as _error, warning as _warning } from "@solid-component/utils";
+import { createListMotion } from "@solid-primitive/motion";
+import { isObject } from "@solid-primitive/utils";
 import {
   createContext,
   createEffect,
@@ -16,7 +17,6 @@ import {
 } from "solid-js";
 import Motion, { MotionProps } from "./Motion";
 import type { MotionEndEvent, MotionName } from "./types";
-import { error as _error, warning as _warning } from "@solid-component/utils";
 
 type MotionKey = string | number;
 type MotionIdentity = MotionKey | object;
@@ -240,7 +240,7 @@ export function MotionGroupItem<T extends ValidComponent = "div">(
       leave={contextProps.leave}
       name={contextProps.name}
       deadline={contextProps.deadline}
-      onVisibleChanged={(visible) => {
+      onVisibleChangeEnd={(visible) => {
         if (!visible) {
           state.onRemoved?.();
         }

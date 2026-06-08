@@ -1,5 +1,5 @@
 import { isVisible } from "@solid-component/utils";
-import { $DISCARD, createBatcher } from "@solid-primitive/shared";
+import { $DISCARD, createTaskQueue } from "@solid-primitive/scheduler";
 import {
   type Accessor,
   createEffect,
@@ -127,7 +127,7 @@ export default function createFloating(
     if (!popupEl) return [];
     return collectScroller(popupEl);
   });
-  const repositionBatcher = createBatcher({
+  const repositionQueue = createTaskQueue({
     strategy: "latest",
   });
 
@@ -702,7 +702,7 @@ export default function createFloating(
 
   const reposition: FloatingContextValue["reposition"] = (cache?: boolean) => {
     // 定位请求高频且只关心最后一次结果，用覆盖型批处理避免重复测量。
-    return repositionBatcher
+    return repositionQueue
       .submit(() => (updatePosition(cache) ? "updated" : "skipped"))
       .then((value) => (value === $DISCARD ? "superseded" : value));
   };

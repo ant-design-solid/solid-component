@@ -14,6 +14,9 @@
     "build": "tsdown"
   },
   "peerDependencies": {
+    "@solid-primitive/utils": "^0.1.0-beta.1",
+    "@solid-primitive/map": "^0.1.0-beta.1",
+    "@solid-primitive/scheduler": "^0.1.0-beta.1",
     "solid-js": "^1.6.5"
   },
   "license": "ISC"

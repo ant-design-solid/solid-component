@@ -1,4 +1,5 @@
-import { createCollection } from "@solid-primitive/shared";
+import { ReactiveMap } from "@solid-primitive/map";
+import { makeRaf } from "@solid-primitive/scheduler";
 import {
   batch,
   createEffect,
@@ -8,7 +9,6 @@ import {
   untrack,
   type Accessor,
 } from "solid-js";
-import { makeRaf } from "../raf";
 import { warning } from "../warn";
 
 export type OrderedRegistryUid = symbol | string;
@@ -49,8 +49,9 @@ export function createOrderedRegistry<T extends OrderedRegistryRecord>(
   options: CreateOrderedRegistryOptions = {},
 ) {
   const { package: pkg, rootRef } = options;
-  const registry = createCollection(new Map<OrderedRegistryUid, T>());
-  const orderMap = createCollection(new Map<OrderedRegistryUid, number>());
+  const registry = new ReactiveMap<OrderedRegistryUid, T>();
+  const orderMap = new ReactiveMap<OrderedRegistryUid, number>();
+
   const [ordered, setOrdered] = createSignal<T[]>([]);
   const [raf, cancelRaf] = makeRaf();
 

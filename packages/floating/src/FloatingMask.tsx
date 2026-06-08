@@ -1,6 +1,5 @@
 import { Motion } from "@solid-component/motion";
-import { splitProps } from "solid-js";
-import type { JSX } from "solid-js/jsx-runtime";
+import { splitProps, JSX } from "solid-js";
 import type { FloatingMotionConfig } from "./FloatingContext";
 import { useFloatingContext } from "./FloatingContext";
 

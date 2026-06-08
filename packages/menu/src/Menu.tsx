@@ -1,7 +1,7 @@
-import { ValueOf } from "@solid-primitive/shared";
-import MenuRoot, { MENU_ROOT_OWN_PROPS, MenuRootOwnProps } from "./MenuRoot";
+import type { ValueOf } from "@solid-primitive/utils";
 import { Show, splitProps } from "solid-js";
 import MenuMore from "./MenuMore";
+import MenuRoot, { MENU_ROOT_OWN_PROPS, MenuRootOwnProps } from "./MenuRoot";
 
 interface MenuOwnProps extends Pick<
   MenuRootOwnProps,

@@ -1,60 +1,65 @@
-import { makeEventListener } from '@solid-primitive/web'
-import { Accessor, createEffect, createUniqueId, onCleanup } from 'solid-js'
+import { makeEventListener } from "@solid-primitive/event-listener";
+import { Accessor, createEffect, createUniqueId, onCleanup } from "solid-js";
 
-export type EscCallback = (event: KeyboardEvent & { inStackTop: boolean }) => void
+export type EscCallback = (
+  event: KeyboardEvent & { inStackTop: boolean },
+) => void;
 
-let stack: { id: string; onEsc: EscCallback }[] = []
+let stack: { id: string; onEsc: EscCallback }[] = [];
 
-const IME_LOCK_DURATION = 200
-let lastCompositionEndTime = 0
+const IME_LOCK_DURATION = 200;
+let lastCompositionEndTime = 0;
 
 function onGlobalKeyDown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && !event.isComposing) {
-    const now = Date.now()
+  if (event.key === "Escape" && !event.isComposing) {
+    const now = Date.now();
     if (now - lastCompositionEndTime < IME_LOCK_DURATION) {
-      return
+      return;
     }
-    const len = stack.length
+    const len = stack.length;
     for (let i = len - 1; i >= 0; i -= 1) {
       stack[i].onEsc(
         Object.assign(event, {
           inStackTop: i === len - 1,
         }),
-      )
+      );
     }
   }
 }
 
 function onGlobalCompositionEnd() {
-  lastCompositionEndTime = Date.now()
+  lastCompositionEndTime = Date.now();
 }
 
-export default function useEscKeyDown(open: Accessor<boolean>, onEsc: EscCallback = () => {}) {
-  const id = createUniqueId()
-  const onEventEsc = onEsc
+export default function useEscKeyDown(
+  open: Accessor<boolean>,
+  onEsc: EscCallback = () => {},
+) {
+  const id = createUniqueId();
+  const onEventEsc = onEsc;
   const ensure = () => {
-    if (!stack.find(item => item.id === id)) {
-      stack.push({ id, onEsc: onEventEsc })
+    if (!stack.find((item) => item.id === id)) {
+      stack.push({ id, onEsc: onEventEsc });
     }
-  }
+  };
   const clear = () => {
-    stack = stack.filter(item => item.id !== id)
-  }
+    stack = stack.filter((item) => item.id !== id);
+  };
 
   createEffect(() => {
-    const opened = open()
+    const opened = open();
     if (opened) {
-      ensure()
+      ensure();
       const cleanups = [
-        makeEventListener(window, 'keydown', onGlobalKeyDown),
-        makeEventListener(window, 'compositionend', onGlobalCompositionEnd),
-      ]
+        makeEventListener(window, "keydown", onGlobalKeyDown),
+        makeEventListener(window, "compositionend", onGlobalCompositionEnd),
+      ];
       onCleanup(() => {
-        clear()
-        !stack.length && cleanups.forEach(cleanup => cleanup)
-      })
+        clear();
+        !stack.length && cleanups.forEach((cleanup) => cleanup);
+      });
     } else {
-      clear()
+      clear();
     }
-  })
+  });
 }

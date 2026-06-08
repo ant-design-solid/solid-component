@@ -1,7 +1,12 @@
-import { noop } from "@solid-primitive/shared";
-import { makeEventListener } from "@solid-primitive/web";
+import { noop } from "@solid-primitive/utils";
+import { makeEventListener } from "@solid-primitive/event-listener";
 import { onCleanup, type Accessor } from "solid-js";
-import type { MotionEndEvent, MotionName, MotionStatus, MotionStep } from "./types";
+import type {
+  MotionEndEvent,
+  MotionName,
+  MotionStatus,
+  MotionStep,
+} from "./types";
 import { forceReflow, getMotionClassNames, removeMotionClasses } from "./util";
 
 export interface MotionHandlers {
@@ -37,8 +42,15 @@ export function createMotionRunner(
   let motionRunId = 0;
   let endCleanup: VoidFunction = noop;
 
-  const shouldWaitForMotionEnd = (status: MotionStatus, config: ActiveMotionConfig) => {
-    const { root, phase, step } = getMotionClassNames(config.name, status, "active");
+  const shouldWaitForMotionEnd = (
+    status: MotionStatus,
+    config: ActiveMotionConfig,
+  ) => {
+    const { root, phase, step } = getMotionClassNames(
+      config.name,
+      status,
+      "active",
+    );
     return !!root || !!phase || !!step || config.deadline != null;
   };
 
@@ -49,7 +61,11 @@ export function createMotionRunner(
     step: Exclude<MotionStep, "idle" | "end">,
   ) => {
     removeMotionClasses(el, name);
-    const { root, phase, step: stepClass } = getMotionClassNames(name, status, step);
+    const {
+      root,
+      phase,
+      step: stepClass,
+    } = getMotionClassNames(name, status, step);
     const classes = [root, phase, stepClass].filter(Boolean) as string[];
     if (classes.length > 0) {
       el.classList.add(...classes);

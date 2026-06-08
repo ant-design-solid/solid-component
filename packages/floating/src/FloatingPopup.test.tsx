@@ -54,8 +54,8 @@ vi.mock('@solid-component/motion', () => ({
   },
 }))
 
-vi.mock('@solid-primitive/web', async () => {
-  const actual = await vi.importActual<typeof import('@solid-primitive/web')>('@solid-primitive/web')
+vi.mock('@solid-primitive/event-listener', async () => {
+  const actual = await vi.importActual<typeof import('@solid-primitive/event-listener')>('@solid-primitive/event-listener')
   return {
     ...actual,
     onClickOutside,

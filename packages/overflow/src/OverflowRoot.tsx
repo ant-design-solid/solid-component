@@ -2,12 +2,9 @@ import Polymorphic, {
   ElementOf,
   PolymorphicProps,
 } from "@solid-component/polymorphic";
-import {
-  createOrderedRegistry,
-  makeRaf,
-  mergeRefs,
-} from "@solid-component/utils";
-import { createResizeObserver } from "@solid-primitive/web";
+import { createOrderedRegistry, mergeRefs } from "@solid-component/utils";
+import { createResizeObserver } from "@solid-primitive/resize-observer";
+import { makeRaf } from "@solid-primitive/scheduler";
 import {
   batch,
   createEffect,

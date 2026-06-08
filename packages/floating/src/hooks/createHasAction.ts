@@ -1,4 +1,5 @@
-import { access, createCollection, toArray } from "@solid-primitive/shared";
+import { ReactiveSet } from "@solid-primitive/set";
+import { access, toArray } from "@solid-primitive/utils";
 import { Accessor, batch, createEffect } from "solid-js";
 
 export type ActionType = "hover" | "focus" | "click" | "contextMenu";
@@ -12,8 +13,7 @@ type ExternalActionType =
 
 type ActionTypes = ExternalActionType | ExternalActionType[];
 
-export type HasAction = ReturnType<typeof createHasAction>
-
+export type HasAction = ReturnType<typeof createHasAction>;
 
 function normalizeAction(action: ExternalActionType): NormalizedActionType {
   if (typeof action === "string") {
@@ -27,12 +27,8 @@ export default function createHasAction(
   showAction: Accessor<ActionTypes | undefined>,
   hideAction: Accessor<ActionTypes | undefined>,
 ) {
-  const showActionSet = createCollection(
-    new Set<NormalizedActionType>(),
-  );
-  const hideActionSet = createCollection(
-    new Set<NormalizedActionType>(),
-  );
+  const showActionSet = new ReactiveSet<NormalizedActionType>();
+  const hideActionSet = new ReactiveSet<NormalizedActionType>();
 
   createEffect(() => {
     const mergedShowActions = toArray(access(showAction) ?? access(action)).map(

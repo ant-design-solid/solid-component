@@ -24,6 +24,10 @@
     "@solid-component/polymorphic": "workspace:^"
   },
   "peerDependencies": {
+    "@solid-primitive/event-listener": "^0.1.0-beta.1",
+    "@solid-primitive/motion": "^0.1.0-beta.1",
+    "@solid-primitive/utils": "^0.1.0-beta.1",
+    "@solid-primitive/scheduler": "^0.1.0-beta.1",
     "solid-js": "^1.6.5"
   },
   "license": "ISC"
