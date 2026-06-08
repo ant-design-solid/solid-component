@@ -15,6 +15,7 @@ import {
 } from "@solid-component/utils";
 import {
   createMemo,
+  createSelector,
   createSignal,
   mergeProps,
   Show,
@@ -57,7 +58,7 @@ export interface MenuRootOwnProps {
   motions?: Partial<Record<MenuMode, MenuMotionConfig>>;
   onSelect?: (info: SelectInfo) => void;
   onDeselect?: (info: SelectInfo) => void;
-  onSelectionChange?: (selectedKeys: MenuKey[], info: SelectInfo) => void;
+  onSelectionChange?: (selectedKeys: MenuKey[]) => void;
   onOpenChange?: (openKeys: MenuKey[]) => void;
   onAction?: (info: MenuActionInfo) => void;
 }
@@ -134,10 +135,12 @@ export default function MenuRoot<T extends ValidComponent>(
   const [selectedKeys, setSelectedKeys] = createControllableSignal<MenuKey[]>({
     value: () => local.selectedKeys,
     defaultValue: local.defaultSelectedKeys,
+    onChange: (value) => local.onSelectionChange?.(value),
   });
   const [openKeys, setOpenKeys] = createControllableSignal<MenuKey[]>({
     value: () => local.openKeys,
     defaultValue: local.defaultOpenKeys,
+    onChange: (value) => local.onOpenChange?.(value),
   });
   const [activeKey, setActiveKey] = createSignal<MenuKey>();
   const [overflowInfo, setOverflowInfo] =
@@ -336,7 +339,6 @@ export default function MenuRoot<T extends ValidComponent>(
     }
 
     setOpenKeys(nextKeys);
-    local.onOpenChange?.(nextKeys);
   };
 
   const activate = (key: MenuKey, domEvent: MouseEvent | KeyboardEvent) => {
@@ -354,7 +356,6 @@ export default function MenuRoot<T extends ValidComponent>(
     if (!local.selectable) {
       if (local.mode !== MenuMode.inline) {
         setOpenKeys([]);
-        local.onOpenChange?.([]);
       }
       return;
     }
@@ -388,11 +389,9 @@ export default function MenuRoot<T extends ValidComponent>(
     } else {
       local.onSelect?.(selectInfo);
     }
-    local.onSelectionChange?.(nextKeys, selectInfo);
 
     if (!inline()) {
       setOpenKeys([]);
-      local.onOpenChange?.([]);
     }
   };
 

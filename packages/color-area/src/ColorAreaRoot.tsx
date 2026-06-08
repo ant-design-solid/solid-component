@@ -16,47 +16,45 @@ import {
   ValidComponent,
 } from "solid-js";
 import { ColorAreaContext, ColorAreaContextValue } from "./ColorAreaContext";
-import {
-  applyOffset,
-  Color,
-  toOffset,
-  TransformOffset,
-} from "./utils";
+import { applyOffset, Color, toOffset, TransformOffset } from "./utils";
 
 function clampOffset(value: number) {
   return Math.max(0, Math.min(value, 100));
 }
 
-export interface ColorAreaRootOwnProps<
+export interface ColorAreaRootOwnProps {
+  value?: Color;
+  defaultValue?: Color;
+  disabled?: boolean;
+  onChange?: (color: Color) => void;
+  onChangeEnd?: (color: Color) => void;
+}
+
+export interface ColorAreaCommonProps<
   T extends HTMLElement = HTMLElement,
 > extends Pick<
   JSX.HTMLAttributes<T>,
-  "onPointerDown" | "onPointerMove" | "onPointerUp" | "onPointerCancel"
-> {
-  style: string | JSX.CSSProperties;
+  | "onPointerDown"
+  | "onPointerMove"
+  | "onPointerUp"
+  | "onPointerCancel"
+  | "style"
+> {}
 
-  value: Color;
-  defaultValue: Color;
-  disabled: boolean;
-  onChange: (color: Color) => void;
-  onChangeEnd: (color: Color) => void;
-}
-
-export type ColorAreaRootProps<
+export interface ColorAreaRootProps<
   T extends ValidComponent | HTMLElement = HTMLElement,
-> = Partial<ColorAreaRootOwnProps<ElementOf<T>>>;
+>
+  extends ColorAreaRootOwnProps, ColorAreaCommonProps<ElementOf<T>> {}
 
 const defaults = {
-  as: "div",
   defaultValue: new Color("#1677ff"),
 } as const;
 
 export default function ColorAreaRoot<T extends ValidComponent>(
   props: PolymorphicProps<T, ColorAreaRootProps<T>>,
 ) {
-  const merged = mergeProps(defaults, props as ColorAreaRootOwnProps);
+  const merged = mergeProps(defaults, props as ColorAreaRootProps);
   const [local, rest] = splitProps(merged, [
-    "as",
     "style",
     "value",
     "defaultValue",
@@ -114,7 +112,7 @@ export default function ColorAreaRoot<T extends ValidComponent>(
     activePointerId = null;
   };
 
-  const onPointerMove: ColorAreaRootOwnProps["onPointerMove"] = (e) => {
+  const onPointerMove: ColorAreaRootProps["onPointerMove"] = (e) => {
     if (e.pointerId === activePointerId) {
       e.preventDefault();
       updateOffset(e, e.currentTarget);
@@ -122,7 +120,7 @@ export default function ColorAreaRoot<T extends ValidComponent>(
     callHandler(e, local.onPointerMove);
   };
 
-  const onPointerUp: ColorAreaRootOwnProps["onPointerUp"] = (e) => {
+  const onPointerUp: ColorAreaRootProps["onPointerUp"] = (e) => {
     if (e.pointerId === activePointerId) {
       e.preventDefault();
       resetDragState(e.currentTarget);
@@ -131,7 +129,7 @@ export default function ColorAreaRoot<T extends ValidComponent>(
     callHandler(e, local.onPointerUp);
   };
 
-  const onPointerCancel: ColorAreaRootOwnProps["onPointerCancel"] = (e) => {
+  const onPointerCancel: ColorAreaRootProps["onPointerCancel"] = (e) => {
     if (e.pointerId === activePointerId) {
       resetDragState(e.currentTarget);
       local.onChangeEnd?.(value()!);
@@ -139,7 +137,7 @@ export default function ColorAreaRoot<T extends ValidComponent>(
     callHandler(e, local.onPointerCancel);
   };
 
-  const onPointerDown: ColorAreaRootOwnProps["onPointerDown"] = (e) => {
+  const onPointerDown: ColorAreaRootProps["onPointerDown"] = (e) => {
     resetDragState(e.currentTarget);
 
     if (
@@ -168,14 +166,14 @@ export default function ColorAreaRoot<T extends ValidComponent>(
   );
 
   const context = {
-    color: value as Accessor<Color>,
+    color: value,
     offset,
   } satisfies ColorAreaContextValue;
 
   return (
     <ColorAreaContext.Provider value={context}>
-      <Polymorphic<ColorAreaRootProps>
-        as={local.as}
+      <Polymorphic<ColorAreaCommonProps>
+        as="div"
         style={style()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

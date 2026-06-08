@@ -60,7 +60,7 @@ describe("Motion", () => {
     const onLeaveStart = vi.fn();
     const onLeaveActive = vi.fn();
     const onLeaveEnd = vi.fn();
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
 
     const { host, dispose, setVisible } = mountWithVisible(
       (visible) => (
@@ -70,7 +70,7 @@ describe("Motion", () => {
           onLeaveStart={onLeaveStart}
           onLeaveActive={onLeaveActive}
           onLeaveEnd={onLeaveEnd}
-          onVisibleChanged={onVisibleChanged}
+          onVisibleChangeEnd={onVisibleChangeEnd}
         >
           content
         </Motion>
@@ -87,7 +87,7 @@ describe("Motion", () => {
     expect(onLeaveStart).toHaveBeenCalledTimes(1);
     expect(onLeaveActive).toHaveBeenCalledTimes(1);
     expect(onLeaveEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(false);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(false);
     expect(host.firstElementChild).toBeNull();
 
     dispose();
@@ -357,7 +357,7 @@ describe("Motion", () => {
 
   it("按顺序执行分阶段 enter 生命周期并挂载 root、phase、active class", async () => {
     const calls: string[] = [];
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
 
     const { host, dispose, setVisible } = mountWithVisible((visible) => (
       <Motion
@@ -375,7 +375,7 @@ describe("Motion", () => {
         onEnterEnd={() => {
           calls.push("end");
         }}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -391,12 +391,12 @@ describe("Motion", () => {
     expect(node.classList.contains("fade-enter-active")).toBe(true);
     expect(node.classList.contains("fade-enter-start")).toBe(false);
     expect(node.classList.contains("fade-enter-prepare")).toBe(false);
-    expect(onVisibleChanged).not.toHaveBeenCalledWith(true);
+    expect(onVisibleChangeEnd).not.toHaveBeenCalledWith(true);
 
     node.dispatchEvent(new Event("transitionend", { bubbles: true }));
 
     expect(calls).toEqual(["prepare", "start", "active", "end"]);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(true);
     expect(node.className).toBe("");
 
     dispose();
@@ -445,7 +445,7 @@ describe("Motion", () => {
   });
 
   it("onEnterEnd 返回 false 时继续监听后续结束事件", async () => {
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
     const onEnterEnd = vi
       .fn<
         (
@@ -461,7 +461,7 @@ describe("Motion", () => {
         visible={visible()}
         name="fade"
         onEnterEnd={onEnterEnd}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -474,7 +474,7 @@ describe("Motion", () => {
     node.dispatchEvent(new Event("transitionend", { bubbles: true }));
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).not.toHaveBeenCalledWith(true);
+    expect(onVisibleChangeEnd).not.toHaveBeenCalledWith(true);
     expect(node.classList.contains("fade")).toBe(true);
     expect(node.classList.contains("fade-enter")).toBe(true);
     expect(node.classList.contains("fade-enter-active")).toBe(true);
@@ -482,7 +482,7 @@ describe("Motion", () => {
     node.dispatchEvent(new Event("transitionend", { bubbles: true }));
 
     expect(onEnterEnd).toHaveBeenCalledTimes(2);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(true);
     expect(node.className).toBe("");
 
     dispose();
@@ -490,7 +490,7 @@ describe("Motion", () => {
 
   it("旧 enter 的结束事件不会回流影响新的 leave run", async () => {
     const calls: string[] = [];
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
     const onEnterEnd = vi
       .fn<
         (
@@ -512,7 +512,7 @@ describe("Motion", () => {
         name="fade"
         onEnterEnd={onEnterEnd}
         onLeaveEnd={onLeaveEnd}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -525,7 +525,7 @@ describe("Motion", () => {
     node.dispatchEvent(new Event("transitionend", { bubbles: true }));
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).not.toHaveBeenCalledWith(true);
+    expect(onVisibleChangeEnd).not.toHaveBeenCalledWith(true);
 
     setVisible(false);
     await nextFrame();
@@ -535,7 +535,7 @@ describe("Motion", () => {
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
     expect(onLeaveEnd).toHaveBeenCalledTimes(1);
     expect(calls).toEqual(["leave-end"]);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(false);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(false);
     expect(host.firstElementChild).toBeNull();
 
     dispose();
@@ -543,14 +543,14 @@ describe("Motion", () => {
 
   it("对象形式的 enter 动画会等待 animationend 后再完成", async () => {
     const onEnterEnd = vi.fn();
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
 
     const { host, dispose, setVisible } = mountWithVisible((visible) => (
       <Motion
         visible={visible()}
         name={{ enter: "fade-in" }}
         onEnterEnd={onEnterEnd}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -567,7 +567,7 @@ describe("Motion", () => {
     node.dispatchEvent(new Event("animationend", { bubbles: true }));
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(true);
     expect(node.className).toBe("");
 
     dispose();
@@ -576,7 +576,7 @@ describe("Motion", () => {
   it("deadline 可作为完成时机的兜底", async () => {
     vi.useFakeTimers();
     const onEnterEnd = vi.fn();
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
 
     const { dispose, setVisible } = mountWithVisible((visible) => (
       <Motion
@@ -584,7 +584,7 @@ describe("Motion", () => {
         name="fade"
         deadline={100}
         onEnterEnd={onEnterEnd}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -600,7 +600,7 @@ describe("Motion", () => {
     vi.advanceTimersByTime(100);
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(true);
 
     dispose();
   });
@@ -608,7 +608,7 @@ describe("Motion", () => {
   it("deadline 完成后忽略后续重复结束事件", async () => {
     vi.useFakeTimers();
     const onEnterEnd = vi.fn();
-    const onVisibleChanged = vi.fn();
+    const onVisibleChangeEnd = vi.fn();
 
     const { host, dispose, setVisible } = mountWithVisible((visible) => (
       <Motion
@@ -616,7 +616,7 @@ describe("Motion", () => {
         name="fade"
         deadline={100}
         onEnterEnd={onEnterEnd}
-        onVisibleChanged={onVisibleChanged}
+        onVisibleChangeEnd={onVisibleChangeEnd}
       >
         content
       </Motion>
@@ -632,13 +632,13 @@ describe("Motion", () => {
     vi.advanceTimersByTime(100);
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenLastCalledWith(true);
+    expect(onVisibleChangeEnd).toHaveBeenCalledTimes(1);
+    expect(onVisibleChangeEnd).toHaveBeenLastCalledWith(true);
 
     node.dispatchEvent(new Event("transitionend", { bubbles: true }));
 
     expect(onEnterEnd).toHaveBeenCalledTimes(1);
-    expect(onVisibleChanged).toHaveBeenCalledTimes(1);
+    expect(onVisibleChangeEnd).toHaveBeenCalledTimes(1);
 
     dispose();
   });

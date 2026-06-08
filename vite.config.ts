@@ -1,12 +1,12 @@
 import { nitroV2Plugin as nitro } from "@solidjs/vite-plugin-nitro-2";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 import mdx from "@mdx-js/rollup";
 import { solidStart } from "@solidjs/start/config";
 import rehypePrettyCode from "rehype-pretty-code";
-import { internalPackageSource } from "./build-plugins/internal-package-source";
 
 import {
   getCodeTheme,
@@ -23,10 +23,17 @@ export default defineConfig({
           new URL("./src/lib/mdx.tsx", import.meta.url),
         ),
       },
+      {
+        find: /^@solid-component\/([^/]+)$/,
+        replacement: join(
+          fileURLToPath(new URL("./packages", import.meta.url)),
+          "$1",
+          "src",
+        ),
+      },
     ],
   },
   plugins: [
-    internalPackageSource(),
     {
       name: "docs-code-preview",
       async load(id) {

@@ -9,3 +9,12 @@ export default Object.assign(ColorArea, {
   Thumb: ColorAreaThumb,
   Context: ColorAreaContext,
 });
+
+export type {
+  ColorAreaRootProps,
+  ColorAreaRootOwnProps,
+} from "./ColorAreaRoot";
+export type {
+  ColorAreaThumbProps,
+  ColorAreaThumbOwnProps,
+} from "./ColorAreaThumb";

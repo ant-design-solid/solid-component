@@ -1,5 +1,6 @@
 import { Accessor, createContext, useContext } from "solid-js";
 import type { Color, TransformOffset } from "./utils";
+import { error } from "@solid-component/utils";
 
 export interface ColorAreaContextValue {
   color: Accessor<Color>;
@@ -12,7 +13,9 @@ export function useColorAreaContext() {
   const context = useContext(ColorAreaContext);
 
   if (!context) {
-    throw new Error("[diagen]: ColorArea components must be used within <ColorArea.Root>.");
+    error("ColorArea components must be used within <ColorArea.Root>.", {
+      package: "color-area",
+    });
   }
 
   return context;

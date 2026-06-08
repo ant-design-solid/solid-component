@@ -1,27 +1,36 @@
-import Polymorphic, { ElementOf, PolymorphicProps } from "@solid-component/polymorphic";
+import Polymorphic, {
+  ElementOf,
+  PolymorphicProps,
+} from "@solid-component/polymorphic";
 import { mergeStyle } from "@solid-component/utils";
-import { createMemo, JSX, mergeProps, splitProps, ValidComponent } from "solid-js";
+import {
+  createMemo,
+  JSX,
+  splitProps,
+  ValidComponent
+} from "solid-js";
 import { useColorAreaContext } from "./ColorAreaContext";
 
-export interface ColorAreaThumbOwnProps<T extends HTMLElement = HTMLElement> {
-  style: string | JSX.CSSProperties;
-
-  children: JSX.Element | ((color: string) => JSX.Element);
+export interface ColorAreaThumbOwnProps {}
+export interface ColorAreaThumbCommonProps<
+  T extends HTMLElement = HTMLElement,
+> extends Pick<JSX.HTMLAttributes<T>, "style"> {
+  children?: JSX.Element | ((color: string) => JSX.Element);
 }
 
-export type ColorAreaThumbProps<T extends ValidComponent | HTMLElement = HTMLElement> = Partial<
-  ColorAreaThumbOwnProps<ElementOf<T>>
->;
+export interface ColorAreaThumbProps<
+  T extends ValidComponent | HTMLElement = HTMLElement,
+>
+  extends ColorAreaThumbOwnProps, ColorAreaThumbCommonProps<ElementOf<T>> {}
 
-const defaults = {
-  as: "div",
-} as const;
 export default function ColorAreaThumb<T extends ValidComponent>(
   props: PolymorphicProps<T, ColorAreaThumbProps<T>>,
 ) {
   const context = useColorAreaContext();
-  const merged = mergeProps(defaults, props);
-  const [local, rest] = splitProps(merged, ["as", "style", "children"]);
+  const [local, rest] = splitProps(props as ColorAreaThumbProps, [
+    "style",
+    "children",
+  ]);
 
   const currentColor = createMemo(() => context.color().format("rgb"));
   const style = createMemo(() => {
@@ -41,8 +50,10 @@ export default function ColorAreaThumb<T extends ValidComponent>(
     );
   });
   return (
-    <Polymorphic as={local.as} style={style()} role="presentation" {...rest}>
-      {typeof local.children === "function" ? local.children(currentColor()) : local.children}
+    <Polymorphic as="div" style={style()} role="presentation" {...rest}>
+      {typeof local.children === "function"
+        ? local.children(currentColor())
+        : local.children}
     </Polymorphic>
   );
 }
