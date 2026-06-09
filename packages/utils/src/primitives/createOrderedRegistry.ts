@@ -11,10 +11,10 @@ import {
 } from "solid-js";
 import { warning } from "../warn";
 
-export type OrderedRegistryUid = symbol | string;
+export type OrderedRegistryId = symbol | string;
 
 export interface OrderedRegistryRecord {
-  uid: OrderedRegistryUid;
+  id: OrderedRegistryId;
   ref: Accessor<HTMLElement | undefined>;
   index?: Accessor<number | undefined>;
 }
@@ -49,8 +49,8 @@ export function createOrderedRegistry<T extends OrderedRegistryRecord>(
   options: CreateOrderedRegistryOptions = {},
 ) {
   const { package: pkg, rootRef } = options;
-  const registry = new ReactiveMap<OrderedRegistryUid, T>();
-  const orderMap = new ReactiveMap<OrderedRegistryUid, number>();
+  const registry = new ReactiveMap<OrderedRegistryId, T>();
+  const orderMap = new ReactiveMap<OrderedRegistryId, number>();
 
   const [ordered, setOrdered] = createSignal<T[]>([]);
   const [raf, cancelRaf] = makeRaf();
@@ -78,7 +78,7 @@ export function createOrderedRegistry<T extends OrderedRegistryRecord>(
     const previous = ordered();
     if (
       previous.length === next.length &&
-      previous.every((record, index) => record.uid === next[index]?.uid)
+      previous.every((record, index) => record.id === next[index]?.id)
     ) {
       return;
     }
@@ -87,8 +87,8 @@ export function createOrderedRegistry<T extends OrderedRegistryRecord>(
       setOrdered(next);
 
       next.forEach((record, order) => {
-        if (orderMap.get(record.uid) !== order) {
-          orderMap.set(record.uid, order);
+        if (orderMap.get(record.id) !== order) {
+          orderMap.set(record.id, order);
         }
       });
     });
@@ -160,16 +160,16 @@ export function createOrderedRegistry<T extends OrderedRegistryRecord>(
   onCleanup(cancelRaf);
 
   const register = (entry: T) => {
-    registry.set(entry.uid, entry);
+    registry.set(entry.id, entry);
   };
 
-  const unregister = (uid: OrderedRegistryUid) => {
-    registry.delete(uid);
-    orderMap.delete(uid);
+  const unregister = (id: OrderedRegistryId) => {
+    registry.delete(id);
+    orderMap.delete(id);
   };
-  const getOrder = (val: OrderedRegistryRecord | OrderedRegistryUid) => {
-    const uid = typeof val === "object" ? val.uid : val;
-    return orderMap.get(uid);
+  const getOrder = (val: OrderedRegistryRecord | OrderedRegistryId) => {
+    const id = typeof val === "object" ? val.id : val;
+    return orderMap.get(id);
   };
 
   return {

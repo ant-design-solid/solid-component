@@ -34,7 +34,7 @@ export interface OverflowContextValue {
   registerItem(options: OverflowItemRecord): void;
   unregisterItem(id: OverflowItemUid): void;
 
-  getItemOrder(uid: OverflowItemUid): number | undefined;
+  getItemOrder(id: OverflowItemUid): number | undefined;
   getItemOrder(record: OverflowItemRecord): number | undefined;
 }
 
@@ -49,7 +49,7 @@ export function useOverflowContext() {
     });
   }
 
-  return context;
+  return context!;
 }
 
 export interface OverflowItemContextValue {

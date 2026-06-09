@@ -166,10 +166,10 @@ export default function OverflowItem<T extends ValidComponent>(
   } = useOverflowContext();
   const itemContext = useOverflowItemContext();
 
-  const uid = Symbol("overflow-item");
+  const id = Symbol("overflow-item");
   const [itemRef, setItemRef] = createSignal<HTMLElement>();
   const [width, setWidth] = createSignal<number | null>(null);
-  const order = createMemo(() => getItemOrder(uid)!);
+  const order = createMemo(() => getItemOrder(id)!);
   const inVisibleRange = () => {
     const currentOrder = order();
     const [start, end] = visibleRange();
@@ -194,7 +194,7 @@ export default function OverflowItem<T extends ValidComponent>(
   });
 
   const record = {
-    uid,
+    id,
     key: local.key ?? itemContext?.key,
     ref: itemRef,
     index: () => local.index ?? itemContext?.index(),
@@ -204,7 +204,7 @@ export default function OverflowItem<T extends ValidComponent>(
   registerItem(record);
 
   onCleanup(() => {
-    unregisterItem(uid);
+    unregisterItem(id);
   });
 
   return (
