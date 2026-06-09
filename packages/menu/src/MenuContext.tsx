@@ -38,7 +38,7 @@ export interface MenuSubmenuContextValue {
   toggleOpen: () => void;
 }
 
-export interface MenuRootContextValue {
+export interface MenuContextValue {
   mode: Accessor<MenuMode>;
   direction: Accessor<MenuDirection>;
   disabled: Accessor<boolean>;
@@ -51,7 +51,7 @@ export interface MenuRootContextValue {
 
   setActiveKey: (key: MenuKey | undefined) => void;
   registerEntry: (entry: MenuEntry) => void;
-  unregisterEntry: (id: MenuEntry['uid']) => void;
+  unregisterEntry: (id: MenuEntry['id']) => void;
   getEntry: (key: MenuKey) => MenuEntry | undefined;
   focus: (request: MenuFocusRequest) => boolean;
   getKeyPath: (key: MenuKey) => MenuKey[];
@@ -63,13 +63,13 @@ export interface MenuRootContextValue {
   onAction: (info: MenuActionInfo) => void;
 }
 
-export const MenuRootContext = createContext<MenuRootContextValue>();
+export const MenuContext = createContext<MenuContextValue>();
 export const MenuSubmenuContext = createContext<MenuSubmenuContextValue>();
 export const MenuSubmenuContentContext = createContext(false);
 export const MenuOverflowPopupContext = createContext(false);
 
-export function useMenuRootContext() {
-  const context = useContext(MenuRootContext);
+export function useMenuContext() {
+  const context = useContext(MenuContext);
 
   if (!context) {
     error("Menu components must be used within <Menu.Root>.", {

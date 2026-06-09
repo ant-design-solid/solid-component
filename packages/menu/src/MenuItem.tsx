@@ -20,7 +20,7 @@ import { Dynamic } from "solid-js/web";
 import {
   MenuSubmenuContextValue,
   useMenuOverflowPopupContext,
-  useMenuRootContext,
+  useMenuContext,
   useMenuSubmenuContentContext,
   useMenuSubmenuContext,
 } from "./MenuContext";
@@ -88,7 +88,7 @@ function MenuItemView<T extends ValidComponent>(
 function MenuOverflowItem<T extends ValidComponent>(
   props: PolymorphicProps<T, MenuItemProps<T>>,
 ) {
-  const root = useMenuRootContext();
+  const root = useMenuContext();
   const [local, rest] = splitProps(props as MenuItemProps, [
     "ref",
     "key",
@@ -198,7 +198,7 @@ function MenuOverflowItem<T extends ValidComponent>(
 export default function MenuItem<T extends ValidComponent>(
   props: PolymorphicProps<T, MenuItemProps<T>>,
 ) {
-  const root = useMenuRootContext();
+  const root = useMenuContext();
   const parentSubmenu = useMenuSubmenuContext(false);
   const inSubmenuContent = useMenuSubmenuContentContext();
   const inOverflowPopup = useMenuOverflowPopupContext();
@@ -234,7 +234,7 @@ export default function MenuItem<T extends ValidComponent>(
   const parentKey = createMemo(() =>
     submenu() ? submenu()?.parentKey() : parentSubmenu?.key(),
   );
-  const uid = createUniqueId();
+  const id = createUniqueId();
   const disabled = createMemo(
     () => root.disabled() || !!local.disabled || !!submenu()?.disabled(),
   );
@@ -258,7 +258,7 @@ export default function MenuItem<T extends ValidComponent>(
     );
 
   const entry = {
-    uid,
+    id,
     key,
     parentKey,
     disabled,
@@ -271,7 +271,7 @@ export default function MenuItem<T extends ValidComponent>(
       return;
     }
     root.registerEntry(entry);
-    onCleanup(() => root.unregisterEntry(uid));
+    onCleanup(() => root.unregisterEntry(id));
   });
 
   const state = createMemo<MenuItemRenderState>(() => ({

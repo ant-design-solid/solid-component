@@ -13,7 +13,7 @@ import {
   type JSX,
   type ValidComponent,
 } from "solid-js";
-import { MenuOverflowPopupContext, useMenuRootContext } from "./MenuContext";
+import { MenuOverflowPopupContext, useMenuContext } from "./MenuContext";
 import { MenuPopupContent } from "./MenuSubmenuContent";
 import { MENU_POPUP_PLACEMENTS, resolvePlacement } from "./placements";
 import { MenuMode, MenuPopupTrigger } from "./types";
@@ -53,7 +53,7 @@ export default function MenuMore<T extends ValidComponent>(
     registerEntry,
     unregisterEntry,
     getEntry,
-  } = useMenuRootContext();
+  } = useMenuContext();
   const merged = mergeProps(defaults, props as MenuMoreProps);
   const [local, rest] = splitProps(merged, [
     "trigger",
@@ -61,7 +61,7 @@ export default function MenuMore<T extends ValidComponent>(
     "ref",
     "onFocus",
   ]);
-  const uid = MEMU_MORE_UID;
+  const id = MEMU_MORE_UID;
   const [triggerRef, setTriggerRef] = createSignal<HTMLElement>();
   const trigger = createMemo(() =>
     disabled() ? [] : (local.trigger ?? popup().trigger),
@@ -70,7 +70,7 @@ export default function MenuMore<T extends ValidComponent>(
   const { changeInfo: overflowInfo } = useOverflowContext();
 
   registerEntry({
-    uid,
+    id,
     key: () => MENU_MORE_KEY,
     parentKey: () => undefined,
     disabled,
@@ -78,7 +78,7 @@ export default function MenuMore<T extends ValidComponent>(
   });
 
   onCleanup(() => {
-    unregisterEntry(uid);
+    unregisterEntry(id);
   });
 
   const onFocus = () => {

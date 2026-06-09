@@ -25,9 +25,9 @@ import {
   type ValidComponent,
 } from "solid-js";
 import {
-  MenuRootContext,
+  MenuContext,
   type MenuEntry,
-  type MenuRootContextValue,
+  type MenuContextValue,
 } from "./MenuContext";
 import { MEMU_MORE_UID } from "./MenuMore";
 import { getMenuArrowKeys } from "./menu-keydown";
@@ -233,7 +233,7 @@ export default function MenuRoot<T extends ValidComponent>(
     return false;
   };
 
-  const focus: MenuRootContextValue["focus"] = (request) => {
+  const focus: MenuContextValue["focus"] = (request) => {
     if (request.type === "key") {
       if (request.key === undefined) {
         return false;
@@ -315,7 +315,7 @@ export default function MenuRoot<T extends ValidComponent>(
     });
   };
 
-  const setSubmenuOpen: MenuRootContextValue["setSubmenuOpen"] = (
+  const setSubmenuOpen: MenuContextValue["setSubmenuOpen"] = (
     key,
     open,
   ) => {
@@ -439,7 +439,7 @@ export default function MenuRoot<T extends ValidComponent>(
     registerEntry: (entry) => {
       const key = untrack(entry.key);
       const existing = untrack(() => getEntry(key));
-      if (existing && existing.uid !== entry.uid) {
+      if (existing && existing.id !== entry.id) {
         warning(
           `Duplicate menu key "${String(key)}" detected. Menu keys must be unique.`,
           {
@@ -463,10 +463,10 @@ export default function MenuRoot<T extends ValidComponent>(
     onAction: (info) => {
       local.onAction?.(info);
     },
-  } satisfies MenuRootContextValue;
+  } satisfies MenuContextValue;
 
   return (
-    <MenuRootContext.Provider value={context}>
+    <MenuContext.Provider value={context}>
       <Show
         when={horizontal()}
         fallback={
@@ -493,6 +493,6 @@ export default function MenuRoot<T extends ValidComponent>(
           {...rest}
         />
       </Show>
-    </MenuRootContext.Provider>
+    </MenuContext.Provider>
   );
 }

@@ -106,8 +106,8 @@ export default function createFloating(
   target: Accessor<HTMLElement | [x: number, y: number] | undefined>,
   placement: Accessor<string>,
   placements: Accessor<FloatingPlacements>,
-  popupAlign?: Accessor<FloatingAlign | undefined>,
-  onFloating?: (el: any, align: any) => void,
+  align?: Accessor<FloatingAlign | undefined>,
+  onAlign?: (el: any, align: any) => void,
 ) {
   const [position, setPosition] = createSignal<FloatingPositionState>({
     ready: false,
@@ -165,7 +165,7 @@ export default function createFloating(
 
     const placementInfo: FloatingAlign = {
       ...placements()[placement()],
-      ...popupAlign?.(),
+      ...align?.(),
     };
 
     const placeholderElement = doc.createElement("div");
@@ -666,7 +666,7 @@ export default function createFloating(
     const yCenter = (maxTop + minBottom) / 2;
     const nextArrowY = yCenter - popupTop;
 
-    onFloating?.(popupElement, nextAlignInfo);
+    onAlign?.(popupElement, nextAlignInfo);
 
     // Additional calculate right & bottom position
     let offsetX4Right =
@@ -713,7 +713,7 @@ export default function createFloating(
     const targetValue = target();
     placement();
     placements();
-    popupAlign?.();
+    align?.();
 
     if (!popupElement || !isOpen || !targetValue) {
       return;

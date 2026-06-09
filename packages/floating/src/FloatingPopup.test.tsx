@@ -20,8 +20,9 @@ const {
     placement: 'top',
     placements: {},
     alignPoint: false,
-    popupAlign: undefined,
+    align: undefined,
     stretch: undefined,
+    singleton: false,
     forceRender: undefined as boolean | undefined,
     closeOnClickOutside: undefined as boolean | undefined,
   }
@@ -90,6 +91,7 @@ vi.mock('./FloatingContext', () => ({
     rootOptions: () => rootOptions,
     contains: vi.fn(() => false),
   }),
+  useFloatingHostContext: () => undefined,
 }))
 
 import FloatingPopup from './FloatingPopup'
@@ -101,6 +103,7 @@ afterEach(() => {
   repositionOrder.length = 0
   reposition.mockClear()
   rootOptions.forceRender = undefined
+  rootOptions.singleton = false
   rootOptions.closeOnClickOutside = undefined
   hasAction.mockReset()
   hasAction.mockReturnValue(false)
@@ -163,6 +166,16 @@ describe('FloatingPopup', () => {
 
     expect(lastMotionProps?.forceRender).toBe(true)
     expect(lastMotionProps?.removeOnLeave).toBe(false)
+
+    dispose()
+  })
+
+  it('falls back to the normal popup when singleton is enabled without a host', () => {
+    rootOptions.singleton = true
+
+    const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
+
+    expect(lastMotionProps).toBeDefined()
 
     dispose()
   })

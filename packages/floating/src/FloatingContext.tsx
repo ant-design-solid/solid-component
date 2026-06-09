@@ -1,7 +1,8 @@
-import { createContext, useContext, type Accessor } from "solid-js";
 import type { MotionOwnProps } from "@solid-component/motion";
-import createHasAction from "./hooks/createHasAction";
 import { error } from "@solid-component/utils";
+import { createContext, useContext, type Accessor } from "solid-js";
+import { FloatingPopupProps } from "./FloatingPopup";
+import createHasAction, { ActionType } from "./hooks/createHasAction";
 
 export type AlignPointTopBottom = "t" | "b" | "c";
 export type AlignPointLeftRight = "l" | "r" | "c";
@@ -55,14 +56,27 @@ export interface FloatingMotionConfig extends Omit<
 > {}
 
 export interface FloatingRootOptions {
+  open?: boolean;
+  defaultOpen: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onOpenChangeEnd?: (open: boolean) => void;
+
   placement: string;
   placements: FloatingPlacements;
   alignPoint: boolean;
-  popupAlign?: FloatingAlign;
+  align?: FloatingAlign;
   stretch?: string;
   forceRender?: boolean;
   closeOnClickOutside?: boolean;
   delay: FloatingDelay;
+
+  action: ActionType | ActionType[];
+  showAction?: ActionType[];
+  hideAction?: ActionType[];
+
+  onAlign?: (element: HTMLElement, align: FloatingAlign) => void;
+
+  singleton?: boolean;
 }
 
 export interface FloatingContextValue {
@@ -75,7 +89,7 @@ export interface FloatingContextValue {
   triggerRef: Accessor<HTMLElement | undefined>;
   setTriggerRef: (node: HTMLElement) => void;
   popupRef: Accessor<HTMLElement | undefined>;
-  setPopupRef: (node: HTMLElement) => void;
+  setPopupRef: (node?: HTMLElement) => void;
   position: Accessor<FloatingPositionState>;
   reposition: (
     cache?: boolean,
@@ -103,6 +117,26 @@ export function useFloatingContext() {
   }
 
   return context;
+}
+
+export interface FloatingPopupEntry {
+  id: string;
+  context: FloatingContextValue;
+  props: Accessor<FloatingPopupProps>;
+  activeAt: number;
+}
+
+export interface FloatingHostContextValue {
+  register: (entry: Omit<FloatingPopupEntry, "activeAt">) => void;
+  unregister: (id: string) => void;
+  activate: (id: string) => void;
+  deactivate: (id: string) => void;
+}
+
+export const FloatingHostContext = createContext<FloatingHostContextValue>();
+
+export function useFloatingHostContext() {
+  return useContext(FloatingHostContext);
 }
 
 export default FloatingContext;

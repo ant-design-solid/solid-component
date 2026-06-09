@@ -94,12 +94,14 @@ export default function FloatingTrigger<T extends ValidComponent>(
         setOpen(true);
       }
     }
+    callHandler(e, local.onTouchStart)
   };
 
   const onPointerDown: FloatingTriggerProps["onPointerDown"] = (e) => {
     if (!open()) {
       void reposition();
     }
+    callHandler(e, local.onPointerDown)
   };
 
   const onFocus: FloatingTriggerProps["onFocus"] = (e) => {
@@ -131,8 +133,8 @@ export default function FloatingTrigger<T extends ValidComponent>(
       as="button"
       ref={mergeRefs(local.ref, setTriggerRef)}
       onClick={onClick}
-      onPointerDown={composeHandlers(local.onPointerDown, onPointerDown)}
-      onTouchStart={composeHandlers(local.onTouchStart, onTouchStart)}
+      onTouchStart={onTouchStart}
+      onPointerDown={onPointerDown}
       onPointerEnter={composeHandlers(local.onPointerEnter, onPointerEnter)}
       onPointerLeave={composeHandlers(local.onPointerLeave, onPointerLeave)}
       onFocus={composeHandlers(local.onFocus, onFocus)}

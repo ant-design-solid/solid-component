@@ -1,3 +1,4 @@
+import { FloatingPopupProps } from "@solid-component/floating";
 import { MotionOwnProps } from "@solid-component/motion";
 import { ValueOf } from "@solid-primitive/utils";
 import { ComponentProps, JSX } from "solid-js";
@@ -22,12 +23,13 @@ export type MenuPopupTrigger = "click" | "hover";
 
 export type MenuMotionConfig = Omit<MotionOwnProps, "visible" | "children">;
 
-export interface MenuPopupOptions {
+export interface MenuPopupOptions extends Pick<
+  FloatingPopupProps,
+  "portal" | "zIndex"
+> {
   trigger?: MenuPopupTrigger;
   class?: string | undefined;
   style?: JSX.CSSProperties | string | undefined;
-  zIndex?: number;
-  portal?: boolean | Omit<ComponentProps<typeof Portal>, "children">;
 }
 
 export interface MenuInfo<TEvent extends Event = MouseEvent | KeyboardEvent> {

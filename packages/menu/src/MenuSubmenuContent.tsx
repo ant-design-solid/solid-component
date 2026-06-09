@@ -5,11 +5,11 @@ import {
   type PolymorphicProps,
 } from "@solid-component/polymorphic";
 import { mergeStyle } from "@solid-component/utils";
-import { Show, splitProps, type JSX, type ValidComponent } from "solid-js";
-import { Dynamic, Portal } from "solid-js/web";
+import { splitProps, type JSX, type ValidComponent } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import {
   MenuSubmenuContentContext,
-  useMenuRootContext,
+  useMenuContext,
   useMenuSubmenuContext,
 } from "./MenuContext";
 import { MenuMotionConfig } from "./types";
@@ -32,7 +32,7 @@ export interface MenuSubmenuContentProps<
 function InternalInlineContent<T extends ValidComponent>(
   props: PolymorphicProps<T, MenuSubmenuContentOwnProps>,
 ) {
-  const { motion: rootMotion } = useMenuRootContext();
+  const { motion: rootMotion } = useMenuContext();
   const { open } = useMenuSubmenuContext(true);
   const [local, rest] = splitProps(props as MenuSubmenuContentOwnProps, [
     "motion",
@@ -59,16 +59,12 @@ interface MenuPopupContentProps
     Pick<JSX.HTMLAttributes<HTMLElement>, "class" | "style" | "children"> {}
 
 export function MenuPopupContent(props: MenuPopupContentProps) {
-  const { popup, motion } = useMenuRootContext();
+  const { popup, motion } = useMenuContext();
   const [local, rest] = splitProps(props, ["motion", "style", "class"]);
   const className = () =>
     [popup().class, local.class].filter(Boolean).join(" ") || undefined;
-  const portal = () => {
-    const portal = popup().portal;
-    return portal === true ? {} : portal;
-  };
 
-  const view = () => (
+  return (
     <FloatingPopup
       as="ul"
       role="menu"
@@ -77,14 +73,9 @@ export function MenuPopupContent(props: MenuPopupContentProps) {
       zIndex={popup().zIndex}
       style={mergeStyle(popup().style, local.style)}
       class={className()}
+      portal={popup().portal}
       {...rest}
     />
-  );
-
-  return (
-    <Show when={portal()} fallback={view()}>
-      <Portal {...portal()}>{view()}</Portal>
-    </Show>
   );
 }
 

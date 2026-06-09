@@ -10,7 +10,7 @@ import {
 import {
   MenuSubmenuContentContext,
   MenuSubmenuContext,
-  useMenuRootContext,
+  useMenuContext,
   useMenuSubmenuContext,
   type MenuSubmenuContextValue,
 } from "./MenuContext";
@@ -33,7 +33,7 @@ export interface MenuSubmenuProps
 
 const defaults = { disabled: false } as const;
 export default function MenuSubmenu(props: MenuSubmenuProps) {
-  const root = useMenuRootContext();
+  const root = useMenuContext();
   const parentSubmenu = useMenuSubmenuContext();
 
   const merged = mergeProps(defaults, props);
