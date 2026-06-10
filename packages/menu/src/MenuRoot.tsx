@@ -315,10 +315,7 @@ export default function MenuRoot<T extends ValidComponent>(
     });
   };
 
-  const setSubmenuOpen: MenuContextValue["setSubmenuOpen"] = (
-    key,
-    open,
-  ) => {
+  const setSubmenuOpen: MenuContextValue["setSubmenuOpen"] = (key, open) => {
     const currentKeys = openKeys();
     const nextKeys = open
       ? currentKeys.includes(key)
@@ -436,7 +433,7 @@ export default function MenuRoot<T extends ValidComponent>(
     activeKey,
 
     setActiveKey,
-    registerEntry: (entry) => {
+    register: (entry) => {
       const key = untrack(entry.key);
       const existing = untrack(() => getEntry(key));
       if (existing && existing.id !== entry.id) {
@@ -449,9 +446,10 @@ export default function MenuRoot<T extends ValidComponent>(
         );
       }
       register(entry);
+
+      return () => unregister(entry.id);
     },
-    unregisterEntry: unregister,
-    getEntry,
+    get: getEntry,
     focus,
     getKeyPath,
     isSelected: (key) => selectedKeys().includes(key),

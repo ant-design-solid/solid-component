@@ -50,9 +50,8 @@ export interface MenuContextValue {
   activeKey: Accessor<MenuKey | undefined>;
 
   setActiveKey: (key: MenuKey | undefined) => void;
-  registerEntry: (entry: MenuEntry) => void;
-  unregisterEntry: (id: MenuEntry['id']) => void;
-  getEntry: (key: MenuKey) => MenuEntry | undefined;
+  register: (entry: MenuEntry) => VoidFunction;
+  get: (key: MenuKey) => MenuEntry | undefined;
   focus: (request: MenuFocusRequest) => boolean;
   getKeyPath: (key: MenuKey) => MenuKey[];
   isSelected: (key: MenuKey) => boolean;

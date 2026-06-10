@@ -266,13 +266,9 @@ export default function MenuItem<T extends ValidComponent>(
     renderInMore,
   };
 
-  createEffect(() => {
-    if (inOverflowPopup) {
-      return;
-    }
-    root.registerEntry(entry);
-    onCleanup(() => root.unregisterEntry(id));
-  });
+  if (!inOverflowPopup) {
+    onCleanup(root.register(entry))
+  }
 
   const state = createMemo<MenuItemRenderState>(() => ({
     selected: selected(),

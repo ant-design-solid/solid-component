@@ -50,9 +50,8 @@ export default function MenuMore<T extends ValidComponent>(
     popup,
     activeKey,
     setActiveKey,
-    registerEntry,
-    unregisterEntry,
-    getEntry,
+    register,
+    get,
   } = useMenuContext();
   const merged = mergeProps(defaults, props as MenuMoreProps);
   const [local, rest] = splitProps(merged, [
@@ -69,17 +68,14 @@ export default function MenuMore<T extends ValidComponent>(
   const placement = createMemo(() => resolvePlacement(mode(), direction(), 1));
   const { changeInfo: overflowInfo } = useOverflowContext();
 
-  registerEntry({
+  const entry = {
     id,
     key: () => MENU_MORE_KEY,
     parentKey: () => undefined,
     disabled,
     ref: triggerRef,
-  });
-
-  onCleanup(() => {
-    unregisterEntry(id);
-  });
+  };
+  onCleanup(register(entry));
 
   const onFocus = () => {
     setActiveKey(MENU_MORE_KEY);
@@ -110,7 +106,7 @@ export default function MenuMore<T extends ValidComponent>(
           <MenuOverflowPopupContext.Provider value={true}>
             <MenuPopupContent>
               <For each={overflowInfo().omittedKeys}>
-                {(key) => getEntry(key)?.renderInMore?.()}
+                {(key) => get(key)?.renderInMore?.()}
               </For>
             </MenuPopupContent>
           </MenuOverflowPopupContext.Provider>
