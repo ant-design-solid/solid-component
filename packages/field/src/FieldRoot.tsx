@@ -56,7 +56,6 @@ export interface FieldRootProps<
   extends FieldRootOwnProps, FieldRootCommonProps<ElementOf<T>> {}
 
 const defaults = {
-  as: "div",
   disabled: false,
   readonly: false,
   count: {} as CounterConfig,
@@ -152,6 +151,7 @@ export default function FieldRoot<T extends ValidComponent>(
   return (
     <FieldContext.Provider value={context}>
       <Polymorphic<FieldRootCommonProps>
+        as="div"
         ref={mergeRefs(local.ref, (el) => (ref = el))}
         onClick={onClick}
         {...rest}

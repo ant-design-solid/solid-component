@@ -24,26 +24,32 @@ export interface FieldCountProps
   extends FieldCountOwnProps, FieldCountCommonProps {}
 
 const defaults = {
-  as: "span",
   children: (({ count, maxlength }) =>
     `${count}${maxlength ? ` / ${maxlength}` : ""}`) as CountFormatter,
 } as const;
-export default function FieldCount<T extends ValidComponent = 'span'>(
+export default function FieldCount<T extends ValidComponent = "span">(
   props: PolymorphicProps<T, FieldCountProps>,
 ) {
   const merged = mergeProps(defaults, props as FieldCountProps);
   const [local, rest] = splitProps(merged, ["children"]);
   const { counter, value } = useFieldContext();
   const length = createMemo(() => counter().strategy(value()));
+  const state = {
+    get value() {
+      return value();
+    },
+    get count() {
+      return length();
+    },
+    get maxlength() {
+      return counter().max;
+    },
+  };
 
   return (
-    <Polymorphic {...rest}>
+    <Polymorphic as="span" {...rest}>
       {typeof local.children === "function"
-        ? local.children({
-            value: value(),
-            count: length(),
-            maxlength: counter().max,
-          })
+        ? local.children(state)
         : local.children}
     </Polymorphic>
   );
