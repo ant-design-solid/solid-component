@@ -31,8 +31,7 @@ export interface OverflowContextValue {
   setRestWidth(width: number | null): void;
   setSuffixWidth(width: number | null): void;
 
-  registerItem(options: OverflowItemRecord): void;
-  unregisterItem(id: OverflowItemUid): void;
+  register(options: OverflowItemRecord): VoidFunction;
 
   getItemOrder(id: OverflowItemUid): number | undefined;
   getItemOrder(record: OverflowItemRecord): number | undefined;

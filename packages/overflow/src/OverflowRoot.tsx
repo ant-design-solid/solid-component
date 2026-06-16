@@ -469,8 +469,10 @@ export default function OverflowRoot<T extends ValidComponent>(
     setRestWidth,
     setSuffixWidth,
 
-    registerItem: register,
-    unregisterItem: unregister,
+    register: (entry) => {
+      register(entry);
+      return () => unregister(entry.id);
+    },
 
     getItemOrder: getOrder,
   } satisfies OverflowContextValue;

@@ -161,8 +161,7 @@ export default function OverflowItem<T extends ValidComponent>(
     measuring,
     previewRange,
     getItemOrder,
-    registerItem,
-    unregisterItem,
+    register,
   } = useOverflowContext();
   const itemContext = useOverflowItemContext();
 
@@ -201,11 +200,7 @@ export default function OverflowItem<T extends ValidComponent>(
     width,
   };
 
-  registerItem(record);
-
-  onCleanup(() => {
-    unregisterItem(id);
-  });
+  onCleanup(register(record));
 
   return (
     <OverflowItemContext.Provider value={null}>
