@@ -127,7 +127,7 @@ export default function Motion(props: MotionProps) {
         if (merged.appear) {
           queueMotion("appear");
         } else {
-          merged.onVisibleChangeEnd?.(true);
+          queueMicrotask(() => merged.onVisibleChangeEnd?.(true));
         }
       } else {
         setPresent(false);
