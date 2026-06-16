@@ -58,7 +58,7 @@ export interface FieldRootProps<
 const defaults = {
   disabled: false,
   readonly: false,
-  count: {} as CounterConfig,
+  counter: {} as CounterConfig,
 } as const;
 export default function FieldRoot<T extends ValidComponent>(
   props: PolymorphicProps<T, FieldRootProps<T>>,
@@ -71,7 +71,7 @@ export default function FieldRoot<T extends ValidComponent>(
     "onChange",
 
     "maxlength",
-    "count",
+    "counter",
 
     "disabled",
     "readonly",
@@ -94,7 +94,7 @@ export default function FieldRoot<T extends ValidComponent>(
       strategy = (value) => value.length,
       overflowFormatter,
       max,
-    } = local.count;
+    } = local.counter;
 
     return {
       strategy,
