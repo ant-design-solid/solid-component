@@ -1,10 +1,23 @@
 import { PolymorphicProps } from "@solid-component/polymorphic";
-import { makeRaf } from "@solid-primitive/scheduler";
+import { mergeStyle } from "@solid-component/utils";
 import { createResizeObserver } from "@solid-primitive/resize-observer";
-import { createEffect, createMemo, JSX, splitProps } from "solid-js";
+import { makeRaf } from "@solid-primitive/scheduler";
+import {
+  batch,
+  createEffect,
+  createMemo,
+  createSignal,
+  JSX,
+  onCleanup,
+  splitProps,
+  untrack,
+} from "solid-js";
 import { useFieldContext } from "./FieldContext";
 import { FieldBaseInput, FieldBaseInputOwnProps } from "./FieldInput";
-import resizeTextArea from "./utils/resizeTextArea";
+import {
+  measureTextAreaHeight,
+  TextAreaMeasurement,
+} from "./utils/resizeTextArea";
 
 interface AutoSizeConfig {
   /** Minimum visible rows when autoSize is enabled. */
@@ -41,19 +54,32 @@ interface FieldTextAreaCommonProps extends Pick<
 export interface FieldTextAreaProps
   extends FieldTextAreaInputOwnProps, FieldTextAreaCommonProps {}
 
+const RESIZE_START = 0;
+const RESIZE_MEASURING = 1;
+const RESIZE_STABLE = 2;
+
+type ResizeState =
+  | typeof RESIZE_START
+  | typeof RESIZE_MEASURING
+  | typeof RESIZE_STABLE;
+
 export default function FieldTextArea(
   props: PolymorphicProps<"textarea", FieldTextAreaProps>,
 ) {
   const { fieldRef, value } = useFieldContext();
-  const textareaRef = () => {
-    const el = fieldRef();
-    return el instanceof HTMLTextAreaElement ? el : null;
-  };
   const [local, rest] = splitProps(props as FieldTextAreaProps, [
     "autoSize",
     "onResize",
     "style",
   ]);
+  const [resizeState, setResizeState] =
+    createSignal<ResizeState>(RESIZE_STABLE);
+  const [measurement, setMeasurement] = createSignal<TextAreaMeasurement>();
+
+  const textareaRef = createMemo(() => {
+    const el = fieldRef();
+    return el instanceof HTMLTextAreaElement ? el : null;
+  });
 
   const autoSizeConfig = createMemo(() => {
     const config = local.autoSize;
@@ -65,95 +91,99 @@ export default function FieldTextArea(
     }
   });
 
-  const [raf, cancelRaf] = makeRaf();
-  let hasPendingSelfResize = false;
-  let lastObservedWidth: number | undefined;
+  const style = createMemo(() => {
+    const autoSizeStyle: JSX.CSSProperties = {};
 
-  const notifyResize = (el: HTMLTextAreaElement) => {
-    if (!local.onResize) return;
-    const rect = el.getBoundingClientRect();
-    local.onResize(rect);
-  };
+    const measure = measurement();
 
-  const resizeNow = (el: HTMLTextAreaElement) => {
-    const config = autoSizeConfig();
-    if (!config) return false;
-
-    const { minRows, maxRows } = config;
-    const changed = resizeTextArea(el, minRows, maxRows);
-
-    if (changed) {
-      hasPendingSelfResize = true;
+    if (measure) {
+      autoSizeStyle.height = measure.height + "px";
+      const maxHeight = measure.maxHeight;
+      autoSizeStyle["max-height"] =
+        maxHeight != null ? measure.maxHeight + "px" : undefined;
+      autoSizeStyle["min-height"] =
+        measure.minHeight != null ? measure.minHeight + "px" : undefined;
+      autoSizeStyle["overflow-y"] =
+        maxHeight != null
+          ? measure.height > maxHeight
+            ? "auto"
+            : "hidden"
+          : undefined;
+      autoSizeStyle["resize"] = "none";
     }
 
-    return changed;
-  };
+    if (resizeState() !== RESIZE_STABLE) {
+      autoSizeStyle["overflow-x"] = "hidden";
+      autoSizeStyle["overflow-y"] = "hidden";
+    }
 
-  const scheduleResize = (el: HTMLTextAreaElement) => {
-    raf(() => {
-      if (!el.isConnected) return;
+    return mergeStyle(autoSizeStyle, local.style);
+  });
 
-      const changed = resizeNow(el);
-      if (changed) {
-        notifyResize(el);
-      }
-    });
-  };
-
+  const [raf, cancelRaf] = makeRaf();
   createEffect(() => {
-    if (!local.autoSize) {
-      cancelRaf();
-      hasPendingSelfResize = false;
-      lastObservedWidth = undefined;
-
-      const el = textareaRef();
-      if (el) {
-        el.style.height = "";
-        el.style.minHeight = "";
-        el.style.maxHeight = "";
-        el.style.overflowY = "";
-      }
+    const config = autoSizeConfig();
+    if (!config) {
+      cancelRaf()
+      batch(() => {
+        setMeasurement(undefined);
+        setResizeState(RESIZE_STABLE);
+      });
       return;
     }
 
     value();
-    autoSizeConfig();
+    setResizeState(RESIZE_START);
+  });
 
+  createEffect(() => {
     const el = textareaRef();
     if (!el) return;
-    lastObservedWidth = el.clientWidth;
-    const changed = resizeNow(el);
-    if (changed) {
-      notifyResize(el);
-    }
+    const state = resizeState();
+
+    untrack(() => {
+      if (state === RESIZE_START) {
+        setResizeState(RESIZE_MEASURING);
+      } else if (state === RESIZE_MEASURING) {
+        const config = autoSizeConfig();
+        if (!config) return;
+
+        const { minRows, maxRows } = config;
+        const next = measureTextAreaHeight(el, minRows, maxRows);
+        const prev = measurement();
+        const changed =
+          !prev ||
+          prev.height !== next.height ||
+          prev.minHeight !== next.minHeight ||
+          prev.maxHeight !== next.maxHeight;
+
+        batch(() => {
+          changed && setMeasurement(next);
+          setResizeState(RESIZE_STABLE);
+        });
+      }
+    });
   });
 
-  const target = createMemo(
+  onCleanup(cancelRaf);
+
+  createResizeObserver(
     () => (!!local.autoSize || local.onResize) && textareaRef(),
+    ([entry]) => {
+      if (resizeState() !== RESIZE_STABLE) return;
+
+      if (local.onResize) {
+        const rect = entry.target.getBoundingClientRect();
+        local.onResize(rect);
+      }
+
+      if (local.autoSize) {
+        raf(() => {
+          setResizeState(RESIZE_START);
+        });
+      }
+    },
   );
-  createResizeObserver(target, () => {
-    const el = target();
-    if (!el) return;
 
-    if (local.autoSize) {
-      const width = el.clientWidth;
-      if (width !== lastObservedWidth) {
-        lastObservedWidth = width;
-        scheduleResize(el);
-        return;
-      }
-
-      if (hasPendingSelfResize) {
-        hasPendingSelfResize = false;
-        return;
-      }
-
-      scheduleResize(el);
-      return;
-    }
-
-    notifyResize(el);
-  });
-
-  return <FieldBaseInput as="textarea" style={local.style} {...rest} />;
+  return <FieldBaseInput as="textarea" style={style()} {...rest} />;
 }

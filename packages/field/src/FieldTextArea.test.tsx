@@ -140,12 +140,15 @@ describe("FieldTextArea", () => {
 
     await Promise.resolve();
 
-    expect(onResize).toHaveBeenCalledTimes(1);
     expect(textarea.style.height).toBe("10px");
 
+    // Simulate the first ResizeObserver callback firing after mount
     notifyResize(textarea);
+    expect(onResize).toHaveBeenCalledTimes(1);
+
     await nextFrame();
 
+    // Cycle is broken: re-measure updates height but doesn't call onResize again
     expect(onResize).toHaveBeenCalledTimes(1);
     expect(textarea.style.height).toBe("10px");
 
@@ -194,7 +197,7 @@ describe("FieldTextArea", () => {
     setMockStyle(textarea);
 
     await Promise.resolve();
-    expect(textarea.style.overflowY).toBe("auto");
+    expect(textarea.style.overflowY).toBe("hidden");
 
     setAutoSize(true);
     await Promise.resolve();
