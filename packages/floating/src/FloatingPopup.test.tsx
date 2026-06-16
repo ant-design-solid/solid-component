@@ -7,14 +7,19 @@ const {
   reposition,
   repositionOrder,
   rootOptions,
+  onOpenChangeEnd,
   hasAction,
   onClickOutside,
   makeEventListener,
+  setOpen,
 } = vi.hoisted(() => {
   const repositionOrder: string[] = []
   const reposition = vi.fn(async () => {
     repositionOrder.push('reposition')
     return 'updated' as const
+  })
+  const onOpenChangeEnd = vi.fn((visible: boolean) => {
+    repositionOrder.push(`open-end-${visible}`)
   })
   const rootOptions = {
     placement: 'top',
@@ -25,18 +30,23 @@ const {
     singleton: false,
     forceRender: undefined as boolean | undefined,
     closeOnClickOutside: undefined as boolean | undefined,
+    delay: {},
+    onOpenChangeEnd,
   }
   const hasAction = vi.fn<HasAction>(() => false)
   const onClickOutside = vi.fn()
-  const makeEventListener = vi.fn()
+  const makeEventListener = vi.fn(() => vi.fn())
+  const setOpen = vi.fn()
   return {
     popup: document.createElement('div'),
     reposition,
     repositionOrder,
     rootOptions,
+    onOpenChangeEnd,
     hasAction,
     onClickOutside,
     makeEventListener,
+    setOpen,
   }
 })
 
@@ -44,12 +54,16 @@ let lastMotionProps:
   | {
       forceRender?: boolean
       removeOnLeave?: boolean
+      onAppearPrepare?: (el: HTMLElement) => Promise<void> | void
       onEnterPrepare?: (el: HTMLElement) => Promise<void> | void
+      onLeavePrepare?: (el: HTMLElement) => Promise<void> | void
+      onVisibleChangeEnd?: (visible: boolean) => Promise<void> | void
+      onMouseLeave?: (event: MouseEvent & { currentTarget: HTMLElement }) => void
     }
   | undefined
 
 vi.mock('@solid-component/motion', () => ({
-  default: (props: { forceRender?: boolean; removeOnLeave?: boolean; onEnterPrepare?: (el: HTMLElement) => Promise<void> | void }) => {
+  default: (props: typeof lastMotionProps) => {
     lastMotionProps = props
     return null
   },
@@ -64,35 +78,48 @@ vi.mock('@solid-primitive/event-listener', async () => {
   }
 })
 
-vi.mock('./FloatingContext', () => ({
-  useFloatingContext: () => ({
+vi.mock('./FloatingContext', () => {
+  const floatingContext = () => ({
     id: 'floating',
     open: () => true,
-    setOpen: vi.fn(),
+    setOpen,
     triggerRef: () => undefined,
     setTriggerRef: vi.fn(),
     popupRef: () => popup,
     setPopupRef: vi.fn(),
-    position: () => ({
+    state: () => ({
       ready: false,
       offsetX: 0,
       offsetY: 0,
       offsetR: 0,
       offsetB: 0,
-      arrowX: 0,
-      arrowY: 0,
       scaleX: 1,
       scaleY: 1,
       align: {},
+      arrow: {
+        x: 0,
+        y: 0,
+        fill: 'none',
+      },
     }),
-    reposition,
+    update: reposition,
     hasAction,
     setPointerPoint: vi.fn(),
     rootOptions: () => rootOptions,
+    registerSubPopup: vi.fn(),
     contains: vi.fn(() => false),
-  }),
-  useFloatingHostContext: () => undefined,
-}))
+    host: () => undefined,
+  })
+
+  return {
+    default: {
+      Provider: (props: { children: JSX.Element }) => props.children,
+    },
+    useFloatingContext: floatingContext,
+    useOptionalFloatingContext: floatingContext,
+    useFloatingHostContext: () => undefined,
+  }
+})
 
 import FloatingPopup from './FloatingPopup'
 import { HasAction } from './hooks/createHasAction'
@@ -107,8 +134,11 @@ afterEach(() => {
   rootOptions.closeOnClickOutside = undefined
   hasAction.mockReset()
   hasAction.mockReturnValue(false)
+  onOpenChangeEnd.mockClear()
+  setOpen.mockReset()
   onClickOutside.mockReset()
   makeEventListener.mockReset()
+  makeEventListener.mockReturnValue(vi.fn())
 })
 
 const mount = (view: () => JSX.Element) => {
@@ -146,6 +176,48 @@ describe('FloatingPopup', () => {
     expect(reposition).toHaveBeenCalledTimes(1)
     expect(userPrepare).toHaveBeenCalledTimes(1)
     expect(repositionOrder).toEqual(['reposition', 'user'])
+
+    dispose()
+  })
+
+  it('guards popup mouse leave while internal motion is running', async () => {
+    hasAction.mockImplementation(
+      (type: 'show' | 'hide', action: string) =>
+        type === 'hide' && action === 'hover',
+    )
+
+    const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    await flushMicrotasks()
+
+    lastMotionProps!.onMouseLeave!({ relatedTarget: null } as MouseEvent & {
+      currentTarget: HTMLElement
+    })
+
+    expect(setOpen).not.toHaveBeenCalled()
+
+    lastMotionProps!.onVisibleChangeEnd!(true)
+    lastMotionProps!.onMouseLeave!({ relatedTarget: null } as MouseEvent & {
+      currentTarget: HTMLElement
+    })
+
+    expect(setOpen).toHaveBeenCalledWith(false, undefined)
+
+    dispose()
+  })
+
+  it('aligns before open change end when motion finishes', async () => {
+    const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    await flushMicrotasks()
+
+    reposition.mockClear()
+    repositionOrder.length = 0
+
+    await lastMotionProps!.onVisibleChangeEnd!(true)
+    await flushMicrotasks()
+
+    expect(reposition).toHaveBeenCalledTimes(1)
+    expect(onOpenChangeEnd).toHaveBeenCalledWith(true)
+    expect(repositionOrder).toEqual(['reposition', 'open-end-true'])
 
     dispose()
   })
@@ -213,6 +285,7 @@ describe('FloatingPopup', () => {
 
     onClickOutside.mockReset()
     makeEventListener.mockReset()
+    makeEventListener.mockReturnValue(vi.fn())
     rootOptions.closeOnClickOutside = false
     hasAction.mockImplementation(
       (type: 'show' | 'hide', action: string) =>

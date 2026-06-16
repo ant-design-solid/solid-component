@@ -8,6 +8,7 @@ import {
   untrack,
 } from "solid-js";
 import type {
+  ArrowDirection,
   FloatingAlign,
   FloatingContextValue,
   FloatingPlacements,
@@ -99,6 +100,28 @@ function shouldSwitchPlacement(
   );
 }
 
+const DirectionMap: Record<string, ArrowDirection> = {
+  t: "top",
+  b: "bottom",
+  l: "left",
+  r: "right",
+};
+
+function getArrowDirection(points: [Points, Points]) {
+  const [popupPoints, targetPoints] = points;
+  const [popupTB, popupLR] = popupPoints;
+  const [targetTB, targetLR] = targetPoints;
+
+  if (popupTB !== targetTB && popupTB !== "c") {
+    // arrow 是反向的
+    const reverse = reverseMap[popupTB];
+    return DirectionMap[popupTB];
+  }
+  if (popupLR !== targetLR && popupLR !== "c") {
+    return DirectionMap[popupLR];
+  }
+}
+
 // =========================== createFloating ============================
 export default function createFloating(
   open: Accessor<boolean>,
@@ -106,20 +129,23 @@ export default function createFloating(
   target: Accessor<HTMLElement | [x: number, y: number] | undefined>,
   placement: Accessor<string>,
   placements: Accessor<FloatingPlacements>,
-  align?: Accessor<FloatingAlign | undefined>,
+  align: Accessor<FloatingAlign | undefined>,
   onAlign?: (el: any, align: any) => void,
 ) {
-  const [position, setPosition] = createSignal<FloatingPositionState>({
+  const [state, setState] = createSignal<FloatingPositionState>({
     ready: false,
     offsetX: 0,
     offsetY: 0,
     offsetR: 0,
     offsetB: 0,
-    arrowX: 0,
-    arrowY: 0,
     scaleX: 1,
     scaleY: 1,
     align: placements()[placement()] || {},
+    arrow: {
+      x: 0,
+      y: 0,
+      fill: "none",
+    },
   });
 
   const scrollerList = createMemo<HTMLElement[]>(() => {
@@ -127,7 +153,7 @@ export default function createFloating(
     if (!popupEl) return [];
     return collectScroller(popupEl);
   });
-  const repositionQueue = createTaskQueue({
+  const queue = createTaskQueue({
     strategy: "latest",
   });
 
@@ -165,7 +191,7 @@ export default function createFloating(
 
     const placementInfo: FloatingAlign = {
       ...placements()[placement()],
-      ...align?.(),
+      ...align(),
     };
 
     const placeholderElement = doc.createElement("div");
@@ -325,7 +351,7 @@ export default function createFloating(
 
     const nextAlignInfo = { ...placementInfo };
 
-    let nextPoints = [popupPoints, targetPoints];
+    let nextPoints: [Points, Points] = [popupPoints, targetPoints];
 
     let nextOffsetX = targetAlignPoint.x - popupAlignPoint.x + popupOffsetX;
     let nextOffsetY = targetAlignPoint.y - popupAlignPoint.y + popupOffsetY;
@@ -683,37 +709,54 @@ export default function createFloating(
       nextOffsetY = Math.floor(nextOffsetY);
       offsetY4Bottom = Math.floor(offsetY4Bottom);
     }
+
+    const arrow: FloatingPositionState["arrow"] = {
+      x: nextArrowX / scaleX,
+      y: nextArrowY / scaleY,
+      fill: popupComputedStyle.getPropertyValue(`background-color`),
+    };
+    const arrowDir = getArrowDirection(nextPoints);
+
+    if (arrowDir) {
+      arrow.dir = arrowDir;
+      arrow.stroke = popupComputedStyle.getPropertyValue(
+        `border-${arrowDir}-color`,
+      );
+      arrow.strokeWidth = popupComputedStyle.getPropertyValue(
+        `border-${arrowDir}-width`,
+      );
+    }
+
     const nextPositionState: FloatingPositionState = {
       ready: true,
       offsetX: nextOffsetX / scaleX,
       offsetY: nextOffsetY / scaleY,
       offsetR: offsetX4Right / scaleX,
       offsetB: offsetY4Bottom / scaleY,
-      arrowX: nextArrowX / scaleX,
-      arrowY: nextArrowY / scaleY,
       scaleX,
       scaleY,
       align: nextAlignInfo,
+      arrow,
     };
 
-    setPosition(nextPositionState);
+    setState(nextPositionState);
     return true;
   };
 
-  const reposition: FloatingContextValue["reposition"] = (cache?: boolean) => {
+  const update: FloatingContextValue["update"] = (cache?: boolean) => {
     // 定位请求高频且只关心最后一次结果，用覆盖型批处理避免重复测量。
-    return repositionQueue
+    return queue
       .submit(() => (updatePosition(cache) ? "updated" : "skipped"))
       .then((value) => (value === $DISCARD ? "superseded" : value));
   };
 
   createEffect(() => {
     const popupElement = popup();
-    const isOpen = open();
+    const isOpen = untrack(open);
     const targetValue = target();
     placement();
     placements();
-    align?.();
+    align();
 
     if (!popupElement || !isOpen || !targetValue) {
       return;
@@ -721,12 +764,12 @@ export default function createFloating(
 
     // 对齐依赖变化后自动重算，避免只重置 ready 却没有触发新的定位。
     untrack(() => {
-      void reposition();
+      void update();
     });
   });
 
   const resetReady = () => {
-    setPosition((cur) => ({ ...cur, ready: false }));
+    setState((cur) => ({ ...cur, ready: false }));
   };
 
   createEffect(() => {
@@ -743,5 +786,5 @@ export default function createFloating(
     }
   });
 
-  return [position, reposition] as const;
+  return [state, update] as const;
 }

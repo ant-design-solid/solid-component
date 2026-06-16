@@ -1,8 +1,11 @@
-import { Portal } from "solid-js/web";
 import Floating from "../src";
 import "./style.css";
 
 export default function BasicDemo() {
+  const popupMotion = {
+    name: "sc-floating-fade",
+  };
+
   const placements = {
     top: {
       points: ["bc", "tc"],
@@ -13,6 +16,7 @@ export default function BasicDemo() {
       offset: [0, -10],
     },
   };
+
   return (
     <div
       style={{
@@ -24,10 +28,10 @@ export default function BasicDemo() {
         background: "#f8fbf7",
       }}
     >
-      <Floating.Host>
+      <Floating.Host smooth>
         <Floating.Root
           singleton
-          action="click"
+          action="hover"
           placement="top"
           placements={placements as any}
         >
@@ -47,42 +51,41 @@ export default function BasicDemo() {
             Toggle popup
           </Floating.Trigger>
 
-          <Portal>
-            <Floating.Popup
-              style={{
-                width: "240px",
-                padding: "14px",
-                border: "1px solid #d8e1d4",
-                "border-radius": "16px",
-                background: "#ffffff",
-                "box-shadow": "0 16px 36px rgba(21, 41, 26, 0.14)",
-              }}
-              class="sc-floating-popup"
-            >
-              <strong style={{ display: "block", "margin-bottom": "6px" }}>
-                Composable popup
-              </strong>
-              <span style={{ color: "#5f6d60", "line-height": 1.6 }}>
-                Trigger, portal, popup and arrow are separate primitives so you
-                can assemble a tooltip, popover or dropdown.
-              </span>
-              <Floating.Arrow>
-                <div
-                  style={{
-                    width: "12px",
-                    height: "12px",
-                    rotate: "45deg",
-                    background: "#ffffff",
-                    border: "1px solid #d8e1d4",
-                  }}
-                />
-              </Floating.Arrow>
-            </Floating.Popup>
-          </Portal>
+          <Floating.Popup
+            motion={popupMotion}
+            style={{
+              width: "240px",
+              padding: "14px",
+              border: "1px solid #d8e1d4",
+              "border-radius": "16px",
+              background: "#ffffff",
+              "box-shadow": "0 16px 36px rgba(21, 41, 26, 0.14)",
+            }}
+            class="sc-floating-popup"
+          >
+            <strong style={{ display: "block", "margin-bottom": "6px" }}>
+              Composable popup
+            </strong>
+            <span style={{ color: "#5f6d60", "line-height": 1.6 }}>
+              Trigger, portal, popup and arrow are separate primitives so you
+              can assemble a tooltip, popover or dropdown.
+            </span>
+            <Floating.Arrow>
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  rotate: "45deg",
+                  background: "#ffffff",
+                  border: "1px solid #d8e1d4",
+                }}
+              />
+            </Floating.Arrow>
+          </Floating.Popup>
         </Floating.Root>
         <Floating.Root
           singleton
-          action="click"
+          action="hover"
           placement="top"
           placements={placements as any}
         >
@@ -102,38 +105,26 @@ export default function BasicDemo() {
             Toggle popup
           </Floating.Trigger>
 
-          <Portal>
-            <Floating.Popup
-              style={{
-                width: "240px",
-                padding: "14px",
-                border: "1px solid #d8e1d4",
-                "border-radius": "16px",
-                background: "#ffffff",
-                "box-shadow": "0 16px 36px rgba(21, 41, 26, 0.14)",
-              }}
-              class="sc-floating-popup"
-            >
-              <strong style={{ display: "block", "margin-bottom": "6px" }}>
-                Composable popup
-              </strong>
-              <span style={{ color: "#5f6d60", "line-height": 1.6 }}>
-                Trigger, portal, popup and arrow are separate primitives so you
-                can assemble a tooltip, popover or dropdown.
-              </span>
-              <Floating.Arrow>
-                <div
-                  style={{
-                    width: "12px",
-                    height: "12px",
-                    rotate: "45deg",
-                    background: "#ffffff",
-                    border: "1px solid #d8e1d4",
-                  }}
-                />
-              </Floating.Arrow>
-            </Floating.Popup>
-          </Portal>
+          <Floating.Popup
+            motion={popupMotion}
+            style={{
+              width: "240px",
+              padding: "14px",
+              border: "1px solid #d8e1d4",
+              "border-radius": "16px",
+              background: "#ffffff",
+              "box-shadow": "0 16px 36px rgba(21, 41, 26, 0.14)",
+            }}
+            class="sc-floating-popup"
+          >
+            <strong style={{ display: "block", "margin-bottom": "6px" }}>
+              Composable popup
+            </strong>
+            <span style={{ color: "#5f6d60", "line-height": 1.6 }}>
+              Trigger, portal, popup and arrow are separate primitives
+            </span>
+            <Floating.Arrow />
+          </Floating.Popup>
         </Floating.Root>
       </Floating.Host>
     </div>

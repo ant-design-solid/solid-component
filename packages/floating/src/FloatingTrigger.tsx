@@ -47,7 +47,7 @@ export default function FloatingTrigger<T extends ValidComponent>(
     setPointerPoint,
     setOpen,
     open,
-    reposition,
+    update,
     setTriggerRef,
     rootOptions,
   } = useFloatingContext();
@@ -94,14 +94,14 @@ export default function FloatingTrigger<T extends ValidComponent>(
         setOpen(true);
       }
     }
-    callHandler(e, local.onTouchStart)
+    callHandler(e, local.onTouchStart);
   };
 
   const onPointerDown: FloatingTriggerProps["onPointerDown"] = (e) => {
     if (!open()) {
-      void reposition();
+      void update();
     }
-    callHandler(e, local.onPointerDown)
+    callHandler(e, local.onPointerDown);
   };
 
   const onFocus: FloatingTriggerProps["onFocus"] = (e) => {

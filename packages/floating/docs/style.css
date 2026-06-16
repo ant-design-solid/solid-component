@@ -1,0 +1,35 @@
+.sc-floating-fade {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: var(--arrow-x, 50%) var(--arrow-y, 50%);
+}
+
+.sc-floating-fade-appear,
+.sc-floating-fade-enter,
+.sc-floating-fade-leave {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.sc-floating-fade-appear-start,
+.sc-floating-fade-enter-start,
+.sc-floating-fade-leave-active {
+  opacity: 0;
+  transform: translateY(2px) scale(0.98);
+}
+
+.sc-floating-fade-appear-active,
+.sc-floating-fade-enter-active,
+.sc-floating-fade-leave-start {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.sc-floating-fade-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}

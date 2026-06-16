@@ -1,3 +1,7 @@
+import { error as _error, warning as _waring } from "@solid-component/utils";
+import { JSX } from "solid-js";
+import { FloatingPositionState } from "../FloatingContext";
+
 export function getWin(ele: HTMLElement) {
   return ele.ownerDocument.defaultView;
 }
@@ -128,3 +132,49 @@ export function getVisibleAreas(
   });
   return areas;
 }
+
+export function getOffsetStyle(
+  open: boolean,
+  positionState: FloatingPositionState,
+) {
+  const AUTO = "auto";
+
+  const offsetStyle: JSX.CSSProperties = {
+    bottom: AUTO,
+    left: "-1000vw",
+    right: AUTO,
+    top: "-1000vh",
+  };
+
+  if (positionState.ready || !open) {
+    const { points, dynamicInset } = positionState.align ?? {};
+    const alignRight = dynamicInset && points?.[0]?.[1] === "r";
+    const alignBottom = dynamicInset && points?.[0]?.[0] === "b";
+
+    if (alignRight) {
+      offsetStyle.right = `${positionState.offsetR}px`;
+      offsetStyle.left = AUTO;
+    } else {
+      offsetStyle.left = `${positionState.offsetX}px`;
+      offsetStyle.right = AUTO;
+    }
+
+    if (alignBottom) {
+      offsetStyle.bottom = `${positionState.offsetB}px`;
+      offsetStyle.top = AUTO;
+    } else {
+      offsetStyle.top = `${positionState.offsetY}px`;
+      offsetStyle.bottom = AUTO;
+    }
+  }
+
+  return offsetStyle;
+}
+
+const LOG_OPTIONS = {
+  package: "floating",
+} as const;
+
+export const error = (message: string) => _error(message, LOG_OPTIONS);
+
+export const warning = (message: string) => _waring(message, LOG_OPTIONS);

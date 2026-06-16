@@ -2,7 +2,9 @@ import {
   createControllableSignal,
   getShadowRoot,
 } from "@solid-component/utils";
+import { noop } from "@solid-primitive/utils";
 import {
+  createEffect,
   createMemo,
   createSignal,
   createUniqueId,
@@ -12,6 +14,7 @@ import {
 } from "solid-js";
 import {
   FloatingContext,
+  useFloatingHostContext,
   useOptionalFloatingContext,
   type FloatingContextValue,
   type FloatingPlacements,
@@ -19,7 +22,7 @@ import {
 } from "./FloatingContext";
 import createFloating from "./hooks/createFloating";
 import createHasAction from "./hooks/createHasAction";
-import useDelay from "./hooks/useDelay";
+import { warning } from "./utils";
 
 export interface FloatingRootOwnProps extends Partial<FloatingRootOptions> {}
 
@@ -39,6 +42,7 @@ const defaults = {
   placements: {} as FloatingPlacements,
 } as const;
 export default function FloatingRoot(props: FloatingRootProps) {
+  const hostContext = useFloatingHostContext();
   const parentContext = useOptionalFloatingContext();
   const merged = mergeProps(defaults, props, {
     get delay() {
@@ -54,15 +58,36 @@ export default function FloatingRoot(props: FloatingRootProps) {
     defaultValue: () => merged.defaultOpen,
     onChange: (value) => merged.onOpenChange?.(value),
   });
+  const rootOptions = () => merged satisfies FloatingRootOptions;
+  const id = createUniqueId();
   const [triggerRef, setTriggerRef] = createSignal<HTMLElement>();
-  const [popupRef, setPopupRefSignal] = createSignal<HTMLElement>();
+  const [popupRef, setPopupRef] = createSignal<HTMLElement>();
   const [pointerPoint, setPointerPoint] = createSignal<[number, number]>();
   const target = createMemo(() =>
     merged.alignPoint && pointerPoint() != null ? pointerPoint() : triggerRef(),
   );
+  const host = createMemo(() => {
+    if (!rootOptions().singleton) {
+      return;
+    }
+    if (!hostContext) {
+      warning(`singleton need <Floating.Host>`);
+      return;
+    }
+    return hostContext;
+  });
+  const visible = createMemo(() => {
+    const activeHost = host();
 
-  const [position, reposition] = createFloating(
-    open,
+    if (!activeHost) {
+      return open();
+    }
+
+    return activeHost.isActive(id) && activeHost.open();
+  });
+
+  const [state, update] = createFloating(
+    visible,
     popupRef,
     target,
     () => merged.placement,
@@ -77,50 +102,61 @@ export default function FloatingRoot(props: FloatingRootProps) {
     () => merged.hideAction,
   );
 
-  const delayInvoke = useDelay();
-
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const setOpen: FloatingContextValue["setOpen"] = (next, delay = 0) => {
-    delayInvoke(() => {
+    timeoutId && clearTimeout(timeoutId);
+    timeoutId = undefined;
+    if (!delay) {
       _setOpen(next);
-    }, delay);
-  };
-
-  const rootOptions = () => merged satisfies FloatingRootOptions;
-
-  const id = createUniqueId();
-  const subPopups = new Map<string, HTMLElement>();
-  const setPopupRef: FloatingContextValue["setPopupRef"] = (el) => {
-    setPopupRefSignal(el);
-
-    if (parentContext) {
-      parentContext.registerSubPopup(id, el ?? null);
-
-      onCleanup(() => {
-        parentContext.registerSubPopup(id, null);
-      });
+    } else {
+      timeoutId = setTimeout(() => {
+        _setOpen(next);
+      }, delay * 1000);
     }
   };
+
+  onCleanup(() => {
+    timeoutId && clearTimeout(timeoutId);
+    timeoutId = undefined;
+  });
+
+  const subPopups = new Map<string, HTMLElement>();
+  createEffect(() => {
+    const popupEle = popupRef();
+
+    if (!parentContext || !popupEle) {
+      return;
+    }
+
+    onCleanup(parentContext.registerSubPopup(id, popupEle));
+  });
+
   const context = {
     id,
     open,
     setOpen,
+
+    state,
+    update,
+
     triggerRef,
     setTriggerRef,
     popupRef,
     setPopupRef,
-    position,
-    reposition,
     hasAction,
     setPointerPoint: (x: number, y: number) => setPointerPoint([x, y]),
     rootOptions,
     registerSubPopup(id, ele) {
-      if (ele) {
-        subPopups.set(id, ele);
-      } else {
-        subPopups.delete(id);
-      }
+      subPopups.set(id, ele);
 
-      parentContext?.registerSubPopup(id, ele);
+      const dispose = parentContext
+        ? parentContext.registerSubPopup(id, ele)
+        : noop;
+
+      return () => {
+        subPopups.delete(id);
+        dispose();
+      };
     },
     contains: (ele) => {
       const triggerEle = triggerRef();
@@ -136,6 +172,7 @@ export default function FloatingRoot(props: FloatingRootProps) {
         subPopups.values().some((subPopupEl) => isContain(subPopupEl))
       );
     },
+    host,
   } satisfies FloatingContextValue;
 
   return (

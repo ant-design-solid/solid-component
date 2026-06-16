@@ -1,8 +1,8 @@
 import type { MotionOwnProps } from "@solid-component/motion";
-import { error } from "@solid-component/utils";
 import { createContext, useContext, type Accessor } from "solid-js";
 import { FloatingPopupProps } from "./FloatingPopup";
 import createHasAction, { ActionType } from "./hooks/createHasAction";
+import { error } from "./utils";
 
 export type AlignPointTopBottom = "t" | "b" | "c";
 export type AlignPointLeftRight = "l" | "r" | "c";
@@ -37,17 +37,25 @@ export interface FloatingPlacements {
   [key: string]: FloatingAlign;
 }
 
+export type ArrowDirection = "left" | "right" | "bottom" | "top";
+
 export interface FloatingPositionState {
   ready: boolean;
   offsetX: number;
   offsetY: number;
   offsetR: number;
   offsetB: number;
-  arrowX: number;
-  arrowY: number;
   scaleX: number;
   scaleY: number;
   align: FloatingAlign;
+  arrow: {
+    x: number;
+    y: number;
+    fill: string;
+    dir?: ArrowDirection;
+    stroke?: string;
+    strokeWidth?: string;
+  };
 }
 
 export interface FloatingMotionConfig extends Omit<
@@ -90,15 +98,14 @@ export interface FloatingContextValue {
   setTriggerRef: (node: HTMLElement) => void;
   popupRef: Accessor<HTMLElement | undefined>;
   setPopupRef: (node?: HTMLElement) => void;
-  position: Accessor<FloatingPositionState>;
-  reposition: (
-    cache?: boolean,
-  ) => Promise<"updated" | "superseded" | "skipped">;
+  state: Accessor<FloatingPositionState>;
+  update: (cache?: boolean) => Promise<"updated" | "superseded" | "skipped">;
   hasAction: ReturnType<typeof createHasAction>;
   setPointerPoint: (x: number, y: number) => void;
   rootOptions: Accessor<FloatingRootOptions>;
-  registerSubPopup: (id: string, el: HTMLElement | null) => void;
+  registerSubPopup: (id: string, el: HTMLElement) => VoidFunction;
   contains: (ele: EventTarget) => boolean;
+  host: Accessor<FloatingHostContextValue | undefined>;
 }
 
 export const FloatingContext = createContext<FloatingContextValue>();
@@ -111,24 +118,28 @@ export function useFloatingContext() {
   const context = useOptionalFloatingContext();
 
   if (!context) {
-    error("Floating components must be used within <FloatingRoot>.", {
-      package: "floating",
-    });
+    error("Floating components must be used within <FloatingRoot>.");
   }
 
-  return context;
+  return context!;
 }
 
 export interface FloatingPopupEntry {
   id: string;
   context: FloatingContextValue;
-  props: Accessor<FloatingPopupProps>;
+  props: FloatingPopupProps;
   activeAt: number;
 }
 
+export type FloatingHostSmooth = boolean | { transition?: string } | undefined;
+
 export interface FloatingHostContextValue {
-  register: (entry: Omit<FloatingPopupEntry, "activeAt">) => void;
-  unregister: (id: string) => void;
+  smooth: Accessor<FloatingHostSmooth>;
+  open: Accessor<boolean>;
+  isActive: (id: string) => boolean;
+  activeContext: Accessor<FloatingContextValue | undefined>;
+
+  register: (entry: Omit<FloatingPopupEntry, "activeAt">) => VoidFunction;
   activate: (id: string) => void;
   deactivate: (id: string) => void;
 }
