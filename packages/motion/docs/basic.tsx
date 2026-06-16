@@ -19,14 +19,11 @@ export default function BasicDemo() {
       </div>
 
       <div class="docs-group-list">
-        <Motion
-          as="div"
-          visible={visible()}
-          name="docs-fade"
-          class="docs-group-tag docs-motion-panel"
-        >
-          Motion drives enter and leave phases while keeping the rendered element under your
-          control.
+        <Motion visible={visible()} name="docs-fade">
+          <div class="docs-group-tag docs-motion-panel">
+            Motion drives enter and leave phases while keeping the rendered
+            element under your control.
+          </div>
         </Motion>
       </div>
     </section>

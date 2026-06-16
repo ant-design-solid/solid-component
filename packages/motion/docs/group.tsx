@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, For } from "solid-js";
 import { MotionGroup } from "../src";
 import "./index.css";
 
@@ -64,22 +64,25 @@ export default function GroupDemo() {
           Reset
         </button>
       </div>
-
-      <MotionGroup each={items()} by="id" name="docs-group-item" class="docs-group-list">
-        {(item) => (
-          <MotionGroup.Item as="span" class="docs-group-tag">
-            {item.label}
-            <button
-              class="docs-group-remove"
-              type="button"
-              aria-label={`Remove ${item.label}`}
-              onClick={() => removeById(item.id)}
-            >
-              ×
-            </button>
-          </MotionGroup.Item>
-        )}
-      </MotionGroup>
+      <div class="docs-group-list">
+        <MotionGroup name="docs-group-item">
+          <For each={items()}>
+            {(item) => (
+              <span class="docs-group-tag">
+                {item.label}
+                <button
+                  class="docs-group-remove"
+                  type="button"
+                  aria-label={`Remove ${item.label}`}
+                  onClick={() => removeById(item.id)}
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </For>
+        </MotionGroup>
+      </div>
     </section>
   );
 }

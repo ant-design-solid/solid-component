@@ -1,358 +1,444 @@
-import { ElementOf, Polymorphic, PolymorphicProps } from "@solid-component/polymorphic";
-import { error as _error, warning as _warning } from "@solid-component/utils";
-import { createListMotion } from "@solid-primitive/motion";
-import { isObject } from "@solid-primitive/utils";
+import { getResolvedElements, isHTMLElement } from "@solid-component/utils";
+import { makeEventListener } from "@solid-primitive/event-listener";
+import { noop } from "@solid-primitive/utils";
 import {
-  createContext,
-  createEffect,
+  children,
+  createMemo,
   createSignal,
-  For,
   mergeProps,
-  splitProps,
-  useContext,
-  type Accessor,
+  onCleanup,
+  untrack,
   type JSX,
-  type ParentProps,
-  type ValidComponent,
 } from "solid-js";
-import Motion, { MotionProps } from "./Motion";
-import type { MotionEndEvent, MotionName } from "./types";
+import { isServer } from "solid-js/web";
+import createMotionRunner, { MotionRunner } from "./motionRunner";
+import {
+  MotionStep,
+  type MotionLifecycle,
+  type MotionName,
+  type MotionStatus,
+} from "./types";
+import {
+  forceReflow,
+  genHandlers,
+  getMotionClassNames,
+  resolveMotionPhaseName,
+} from "./util";
 
-type MotionKey = string | number;
-type MotionIdentity = MotionKey | object;
-type MotionGroupByProp<T> = [T] extends [MotionKey]
-  ? { by?: MotionGroupBy<T> }
-  : { by: MotionGroupBy<T> };
-type MotionLifecycleProps = Pick<
-  MotionProps,
-  | "onAppearPrepare"
-  | "onAppearStart"
-  | "onAppearActive"
-  | "onAppearEnd"
-  | "onEnterPrepare"
-  | "onEnterStart"
-  | "onEnterActive"
-  | "onEnterEnd"
-  | "onLeavePrepare"
-  | "onLeaveStart"
-  | "onLeaveActive"
-  | "onLeaveEnd"
->;
-
-export type MotionGroupBy<T> = keyof T | ((item: T) => MotionKey);
-
-interface MotionGroupLifecycle<T> {
-  onAppearPrepare?: (el: HTMLElement, item: T, key: MotionIdentity) => void | Promise<void>;
-  onAppearStart?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onAppearActive?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onAppearEnd?: (
-    el: HTMLElement,
-    item: T,
-    key: MotionIdentity,
-    event: MotionEndEvent,
-  ) => boolean | void;
-  onEnterPrepare?: (el: HTMLElement, item: T, key: MotionIdentity) => void | Promise<void>;
-  onEnterStart?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onEnterActive?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onEnterEnd?: (
-    el: HTMLElement,
-    item: T,
-    key: MotionIdentity,
-    event: MotionEndEvent,
-  ) => boolean | void;
-  onLeavePrepare?: (el: HTMLElement, item: T, key: MotionIdentity) => void | Promise<void>;
-  onLeaveStart?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onLeaveActive?: (el: HTMLElement, item: T, key: MotionIdentity) => void;
-  onLeaveEnd?: (
-    el: HTMLElement,
-    item: T,
-    key: MotionIdentity,
-    event: MotionEndEvent,
-  ) => boolean | void;
-}
-
-interface MotionGroupBaseProps<T> extends MotionGroupLifecycle<T> {
-  each: readonly T[];
-  children: (item: T, index: Accessor<number>) => JSX.Element;
-  appear?: boolean;
-  enter?: boolean;
-  leave?: boolean;
+export interface MotionGroupOwnProps
+  extends MotionLifecycle, Partial<Record<MotionStatus, boolean>> {
+  children?: JSX.Element;
   name?: MotionName;
   deadline?: number;
 }
 
-export type MotionGroupOwnProps<T> = MotionGroupBaseProps<T> & MotionGroupByProp<T>;
+export type MotionGroupProps = MotionGroupOwnProps;
 
-interface MotionGroupCommonProps<T extends HTMLElement> extends Pick<
-  JSX.HTMLAttributes<T>,
-  "class" | "style"
-> {}
-
-export type MotionGroupProps<
-  V,
-  T extends HTMLElement | ValidComponent = HTMLElement,
-> = MotionGroupOwnProps<V> & MotionGroupCommonProps<ElementOf<T>>;
-
-export interface MotionGroupItemOwnProps<T extends HTMLElement = HTMLElement> extends ParentProps {}
-
-export type MotionGroupItemProps<T extends ValidComponent | HTMLElement = HTMLElement> = Partial<
-  MotionGroupItemOwnProps<ElementOf<T>>
->;
-
-interface MotionGroupState<T> {
-  key: MotionIdentity;
-  item: T;
-  isInitial: boolean;
-  enterTick: number;
-
-  present: Accessor<boolean>;
-  setPresent: (present: boolean) => void;
-  visible: Accessor<boolean>;
-  setVisible: (visible: boolean) => void;
-  onRemoved?: VoidFunction;
-}
-
-interface MotionGroupItemContextValue<T> {
-  state: MotionGroupState<T>;
-  props: MotionGroupOwnProps<T>;
+interface MotionGroupEntry {
+  el: HTMLElement;
+  removing: boolean;
+  runner: MotionRunner;
+  motionClassNames: string[];
+  stopMotionEnd: VoidFunction;
+  stopMove?: VoidFunction;
 }
 
 const defaults = {
-  as: "div",
   appear: true,
   enter: true,
   leave: true,
 } as const;
 
-const MotionGroupItemContext = createContext<MotionGroupItemContextValue<any>>();
-
-function resolveMotionIdentity<T>(item: T, by?: MotionGroupBy<T>): MotionIdentity {
-  if (typeof by === "function") {
-    return by(item);
+export default function MotionGroup(props: MotionGroupProps) {
+  const merged = mergeProps(defaults, props as MotionGroupProps);
+  const resolvedChildren = children(() => merged.children);
+  if (isServer) {
+    return resolvedChildren();
   }
 
-  if (typeof by === "string" && isObject(item)) {
-    return item[by] as MotionKey;
-  }
+  const elements = createMemo(() =>
+    getResolvedElements(resolvedChildren(), isHTMLElement),
+  );
+  const entryMap = new Map<HTMLElement, MotionGroupEntry>();
+  const exiting = new WeakSet<HTMLElement>();
+  const [toRemove, setToRemove] = createSignal<HTMLElement[]>([], {
+    equals: false,
+  });
+  let prevSet = new Set<HTMLElement>(merged.appear ? undefined : elements());
+  let initialized = false;
 
-  return isObject(item) ? item : (item as MotionKey);
-}
+  const name = () => merged.name;
+  const deadline = () => merged.deadline;
+  const motionHandlers = genHandlers(merged);
 
-function createMotionGroupState<T>(
-  key: MotionIdentity,
-  item: T,
-  isInitial: boolean,
-): MotionGroupState<T> {
-  const [present, setPresent] = createSignal(true);
-  const [visible, setVisible] = createSignal(isInitial);
+  const getClassNames = (
+    status: MotionStatus,
+    step: Exclude<MotionStep, "end">,
+  ) => {
+    const {
+      root,
+      phase,
+      step: stepClass,
+    } = getMotionClassNames(name(), status, step);
 
-  return {
-    key,
-    item,
-    isInitial,
-    enterTick: 0,
-    present,
-    setPresent,
-    visible,
-    setVisible,
+    return [root, phase, stepClass].filter(Boolean) as string[];
   };
-}
 
-function getGroupMotionLifecycleProps<T>(
-  props: MotionGroupOwnProps<T>,
-  state: MotionGroupState<T>,
-) {
-  return {
-    onAppearPrepare: (el: HTMLElement) => props.onAppearPrepare?.(el, state.item, state.key),
-    onAppearStart: (el: HTMLElement) => props.onAppearStart?.(el, state.item, state.key),
-    onAppearActive: (el: HTMLElement) => props.onAppearActive?.(el, state.item, state.key),
-    onAppearEnd: (el: HTMLElement, event: MotionEndEvent) =>
-      props.onAppearEnd?.(el, state.item, state.key, event),
-    onEnterPrepare: (el: HTMLElement) => props.onEnterPrepare?.(el, state.item, state.key),
-    onEnterStart: (el: HTMLElement) => props.onEnterStart?.(el, state.item, state.key),
-    onEnterActive: (el: HTMLElement) => props.onEnterActive?.(el, state.item, state.key),
-    onEnterEnd: (el: HTMLElement, event: MotionEndEvent) =>
-      props.onEnterEnd?.(el, state.item, state.key, event),
-    onLeavePrepare: (el: HTMLElement) => props.onLeavePrepare?.(el, state.item, state.key),
-    onLeaveStart: (el: HTMLElement) => props.onLeaveStart?.(el, state.item, state.key),
-    onLeaveActive: (el: HTMLElement) => props.onLeaveActive?.(el, state.item, state.key),
-    onLeaveEnd: (el: HTMLElement, event: MotionEndEvent) =>
-      props.onLeaveEnd?.(el, state.item, state.key, event),
-  } satisfies MotionLifecycleProps;
-}
+  const createEntry = (el: HTMLElement): MotionGroupEntry => {
+    const runner = createMotionRunner({
+      name,
+      deadline,
+      async onStep(status, step, classNames) {
+        const handler = motionHandlers[status][step];
+        setClassNames(entry, classNames);
 
-const LOG_OPTIONS = {
-  package: "motion",
-} as const;
-const error = (message: string) => _error(message, LOG_OPTIONS);
+        if (step === "prepare") {
+          entry.stopMotionEnd();
+          await handler?.(entry.el);
+        } else if (step === "start") {
+          handler?.(entry.el);
+          forceReflow(entry.el);
+        } else {
+          handler?.(entry.el);
+          entry.stopMotionEnd = bindMotionEnd(entry);
+        }
+      },
+      onEnd(status, event) {
+        return motionHandlers[status].end?.(entry.el, event);
+      },
+    });
 
-const warning = (message: string) => _warning(message, LOG_OPTIONS);
+    const entry: MotionGroupEntry = {
+      el,
+      removing: false,
+      runner,
+      motionClassNames: [],
+      stopMotionEnd: noop,
+    };
 
-function useMotionGroupItemContext<T>(): MotionGroupItemContextValue<T> {
-  const context = useContext(MotionGroupItemContext) as MotionGroupItemContextValue<T> | undefined;
-  if (!context) {
-    error("MotionGroup.Item must be used within MotionGroup.");
-  }
-  return context as MotionGroupItemContextValue<T>;
-}
+    return entry;
+  };
 
-export function MotionGroupItem<T extends ValidComponent = "div">(
-  props: PolymorphicProps<T, MotionGroupItemProps<T>>,
-) {
-  const merged = mergeProps({ as: "div" }, props as MotionGroupItemProps);
-  const [local, others] = splitProps(merged, ["as", "children"]);
-  const { state, props: contextProps } = useMotionGroupItemContext<any>();
-  const lifecycle = getGroupMotionLifecycleProps(contextProps, state);
+  const cleanupEntry = (entry: MotionGroupEntry) => {
+    entry.stopMove?.();
+    entry.stopMotionEnd();
+    entry.runner.stop();
+    setClassNames(entry, []);
+    entryMap.delete(entry.el);
+  };
 
-  createEffect(() => {
-    const nextPresent = state.present();
-    // 用递增版本号标记当前可见性变更，避免延迟的微任务回写过期状态。
-    state.enterTick += 1;
-    const currentEnterTick = state.enterTick;
+  const finishRemoved = (elements: HTMLElement[]) => {
+    setToRemove((prev) => {
+      prev.push(...elements);
+      return prev;
+    });
 
-    if (!nextPresent) {
-      state.setVisible(false);
-      return;
+    for (const el of elements) {
+      exiting.delete(el);
+    }
+  };
+
+  const startEntryMotion = (entry: MotionGroupEntry, status: MotionStatus) => {
+    entry.runner.start(status, {
+      enabled: merged[status],
+      onFinish() {
+        entry.stopMotionEnd();
+        setClassNames(entry, []);
+
+        if (status === "leave") {
+          if (entry.removing && entryMap.get(entry.el) === entry) {
+            finishRemoved([entry.el]);
+          }
+        }
+      },
+    });
+  };
+
+  const setClassNames = (entry: MotionGroupEntry, classNames: string[]) => {
+    const prev = entry.motionClassNames;
+    if (prev.length > 0) {
+      entry.el.classList.remove(...prev);
     }
 
-    // 初始项直接可见；其余项只要已经进入可见态，就保持稳定显示。
-    if (state.isInitial || state.visible()) {
-      state.setVisible(true);
-      return;
+    entry.motionClassNames = classNames;
+
+    if (classNames.length > 0) {
+      entry.el.classList.add(...classNames);
+    }
+  };
+
+  const bindMotionEnd = (entry: MotionGroupEntry) => {
+    const cleanup = makeEventListener(
+      entry.el,
+      ["transitionend", "animationend"],
+      (event) => {
+        if (event.target !== entry.el) return;
+
+        if (entry.runner.finish(event)) {
+          entry.stopMotionEnd();
+        }
+      },
+    );
+
+    return () => {
+      cleanup();
+      entry.stopMotionEnd = noop;
+    };
+  };
+
+  const collectRects = (elements: readonly HTMLElement[]) => {
+    const rects = new Map<HTMLElement, DOMRect>();
+
+    for (const el of elements) {
+      if (el.isConnected) {
+        rects.set(el, el.getBoundingClientRect());
+      }
+    }
+
+    return rects;
+  };
+
+  const runMoveMotion = (
+    elements: readonly HTMLElement[],
+    prevRects: ReadonlyMap<HTMLElement, DOMRect>,
+    nextRects: ReadonlyMap<HTMLElement, DOMRect>,
+  ) => {
+    const moveClassName = resolveMotionPhaseName(merged.name, "move");
+
+    if (!moveClassName) return;
+
+    const moveClasses = moveClassName.split(/\s+/).filter(Boolean);
+    const moved: Array<{
+      el: HTMLElement;
+      transform: string;
+      transitionDuration: string;
+    }> = [];
+
+    for (const el of elements) {
+      const entry = entryMap.get(el);
+      const prevRect = prevRects.get(el);
+      const nextRect = nextRects.get(el);
+
+      if (!entry || !prevRect || !nextRect) continue;
+
+      const deltaX = prevRect.left - nextRect.left;
+      const deltaY = prevRect.top - nextRect.top;
+
+      if (Math.abs(deltaX) < 0.01 && Math.abs(deltaY) < 0.01) continue;
+
+      entry.stopMove?.();
+
+      const transform = el.style.transform;
+      const transitionDuration = el.style.transitionDuration;
+      const translate = `translate(${deltaX}px, ${deltaY}px)`;
+
+      el.style.transform = transform ? `${translate} ${transform}` : translate;
+      el.style.transitionDuration = "0s";
+      moved.push({ el, transform, transitionDuration });
+    }
+
+    if (!moved.length) return;
+
+    forceReflow(document.body);
+
+    for (const item of moved) {
+      const { el, transform, transitionDuration } = item;
+      const entry = entryMap.get(el);
+
+      if (!entry) continue;
+
+      const stopMove = () => {
+        off();
+        el.classList.remove(...moveClasses);
+        entry.stopMove = undefined;
+      };
+      const onTransitionEnd = (event: TransitionEvent) => {
+        if (event.target !== el) return;
+        if (event.propertyName && !/transform$/.test(event.propertyName)) {
+          return;
+        }
+
+        stopMove();
+      };
+
+      entry.stopMove = stopMove;
+      el.classList.add(...moveClasses);
+      el.style.transform = transform;
+      el.style.transitionDuration = transitionDuration;
+      const off = makeEventListener(el, "transitionend", onTransitionEnd);
+    }
+  };
+
+  function handleChange(change: {
+    added: HTMLElement[];
+    removed: HTMLElement[];
+    unchanged: HTMLElement[];
+    prevRects: ReadonlyMap<HTMLElement, DOMRect>;
+  }) {
+    const startQueue: Array<{
+      entry: MotionGroupEntry;
+      status: MotionStatus;
+    }> = [];
+    const enterQueue: Array<{
+      entry: MotionGroupEntry;
+      status: MotionStatus;
+    }> = [];
+    const leaveQueue: MotionGroupEntry[] = [];
+
+    for (const el of change.added) {
+      const entry = entryMap.get(el);
+
+      if (!entry) continue;
+      startQueue.push({
+        entry,
+        status: initialized ? "enter" : "appear",
+      });
+    }
+
+    for (const el of change.removed) {
+      const entry = entryMap.get(el);
+
+      if (!entry) continue;
+      startQueue.push({ entry, status: "leave" });
+    }
+
+    for (const { entry, status } of startQueue) {
+      if (entryMap.get(entry.el) !== entry) continue;
+      if (status !== "leave" && entry.removing) continue;
+      if (status === "leave" && !entry.removing) continue;
+
+      if (status === "leave") {
+        leaveQueue.push(entry);
+      } else {
+        if (merged[status]) {
+          setClassNames(entry, getClassNames(status, "start"));
+        }
+        enterQueue.push({ entry, status });
+      }
+    }
+
+    for (const entry of leaveQueue) {
+      startEntryMotion(entry, "leave");
     }
 
     queueMicrotask(() => {
-      // 如果本轮 enter 还未开始就被下一次变更打断，直接放弃这次延迟显示。
-      if (state.enterTick !== currentEnterTick || !state.present()) {
-        return;
-      }
+      runMoveMotion(
+        change.unchanged,
+        change.prevRects,
+        collectRects(change.unchanged),
+      );
 
-      state.setVisible(true);
+      for (const { entry, status } of enterQueue) {
+        if (entryMap.get(entry.el) !== entry) continue;
+        if (entry.removing) continue;
+
+        startEntryMotion(entry, status);
+      }
     });
+  }
+
+  onCleanup(() => {
+    for (const entry of entryMap.values()) {
+      cleanupEntry(entry);
+    }
+
+    entryMap.clear();
   });
 
-  return (
-    <Motion<ValidComponent>
-      as={local.as}
-      visible={state.visible()}
-      appear={state.isInitial && contextProps.appear}
-      enter={contextProps.enter}
-      leave={contextProps.leave}
-      name={contextProps.name}
-      deadline={contextProps.deadline}
-      onVisibleChangeEnd={(visible) => {
-        if (!visible) {
-          state.onRemoved?.();
+  const renderElements = createMemo<HTMLElement[]>(
+    (prev) => {
+      const removedElements = toRemove();
+      const sourceElements = elements();
+      const prevRects = collectRects(prev);
+
+      if (removedElements.length) {
+        const removedSet = new Set(removedElements);
+        const next = prev.filter((el) => !removedSet.has(el));
+
+        removedElements.length = 0;
+
+        for (const el of removedSet) {
+          const entry = entryMap.get(el);
+
+          if (entry?.removing) {
+            cleanupEntry(entry);
+          }
         }
-      }}
-      {...lifecycle}
-      {...others}
-    >
-      {local.children}
-    </Motion>
-  );
-}
 
-function MotionGroupRoot<T, C extends ValidComponent = "div">(
-  props: PolymorphicProps<C, MotionGroupProps<T, C>>,
-) {
-  const merged = mergeProps(defaults, props as MotionGroupProps<T, C>);
-  const [local, others] = splitProps(merged, [
-    "as",
-    "each",
-    "by",
-    "appear",
-    "enter",
-    "leave",
-    "name",
-    "deadline",
-    "children",
-    "onAppearPrepare",
-    "onAppearStart",
-    "onAppearActive",
-    "onAppearEnd",
-    "onEnterPrepare",
-    "onEnterStart",
-    "onEnterActive",
-    "onEnterEnd",
-    "onLeavePrepare",
-    "onLeaveStart",
-    "onLeaveActive",
-    "onLeaveEnd",
-  ]);
+        queueMicrotask(() => {
+          runMoveMotion(next, prevRects, collectRects(next));
+        });
 
-  const stateCache = new Map<MotionIdentity, MotionGroupState<T>>();
-  let seededInitialStates = false;
-
-  const states = () => {
-    // 只对当前这轮 each 做重复 key 检查，避免把正常的跨次复用误判成冲突。
-    const seenKeys = new Set<MotionIdentity>();
-
-    return (local.each ?? []).map((item, index) => {
-      const key = resolveMotionIdentity(item, local.by);
-
-      if (key === undefined) {
-        warning(
-          `MotionGroup item at index ${index} resolved to an undefined key. Object items should provide a stable "by" prop or return value.`,
-        );
+        return next;
       }
 
-      if (seenKeys.has(key)) {
-        warning(
-          `MotionGroup detected a duplicate key "${String(key)}". Duplicate keys can break enter/leave state tracking.`,
-        );
-      }
+      return untrack(() => {
+        const sourceSet = new Set(sourceElements);
+        const next = sourceElements.slice();
+        const added: HTMLElement[] = [];
+        const removed: HTMLElement[] = [];
+        const unchanged: HTMLElement[] = [];
+        let nothingChanged = true;
 
-      seenKeys.add(key);
+        for (const el of sourceElements) {
+          let entry = entryMap.get(el);
 
-      const state = stateCache.get(key) ?? createMotionGroupState(key, item, !seededInitialStates);
+          if (!entry) {
+            entry = createEntry(el);
+            entryMap.set(el, entry);
+          }
 
-      state.item = item;
-      state.onRemoved = undefined;
-      state.setPresent(true);
-      stateCache.set(key, state);
-      return state;
-    });
-  };
+          if (entry.removing) {
+            entry.removing = false;
+            exiting.delete(el);
+          }
 
-  createEffect(() => {
-    states();
-    seededInitialStates = true;
-  });
+          if (prevSet.has(el)) {
+            unchanged.push(el);
+          } else {
+            added.push(el);
+          }
+        }
 
-  const visibleStates = createListMotion(states, {
-    appear: false,
-    exitMethod: "keep-index",
-    onChange({ removed, finishRemoved }) {
-      for (const state of removed) {
-        state.setPresent(false);
-        state.onRemoved = () => {
-          // leave 结束后再真正移除列表项，并同步清理缓存状态。
-          finishRemoved([state]);
-          stateCache.delete(state.key);
-        };
-      }
+        for (let index = 0; index < prev.length; index += 1) {
+          const el = prev[index]!;
+
+          if (!sourceSet.has(el)) {
+            const entry = entryMap.get(el);
+
+            if (entry && !exiting.has(el)) {
+              entry.removing = true;
+              exiting.add(el);
+              removed.push(el);
+            }
+
+            next.splice(Math.min(index, next.length), 0, el);
+          }
+
+          if (nothingChanged && el !== next[index]) {
+            nothingChanged = false;
+          }
+        }
+
+        if (!added.length && !removed.length && nothingChanged) {
+          initialized = true;
+          return prev;
+        }
+
+        handleChange({
+          added,
+          removed,
+          unchanged,
+          prevRects,
+        });
+
+        prevSet = sourceSet;
+        initialized = true;
+        return next;
+      });
     },
-  });
-
-  return (
-    <Polymorphic<MotionGroupCommonProps<ElementOf<C>>> as={local.as} {...others}>
-      <For each={visibleStates()}>
-        {(state, index) => (
-          <MotionGroupItemContext.Provider
-            value={{
-              state,
-              props: local,
-            }}
-          >
-            {local.children(state.item, index)}
-          </MotionGroupItemContext.Provider>
-        )}
-      </For>
-    </Polymorphic>
+    merged.appear ? [] : elements().slice(),
   );
-}
 
-export default Object.assign(MotionGroupRoot, {
-  Item: MotionGroupItem,
-});
+  return <>{renderElements()}</>;
+}

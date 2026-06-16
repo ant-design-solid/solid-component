@@ -248,12 +248,6 @@ importers:
       '@solid-primitive/event-listener':
         specifier: ^0.1.0-beta.1
         version: 0.1.0-beta.1(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)
-      '@solid-primitive/motion':
-        specifier: ^0.1.0-beta.1
-        version: 0.1.0-beta.1(solid-js@1.9.11)
-      '@solid-primitive/scheduler':
-        specifier: ^0.1.0-beta.1
-        version: 0.1.0-beta.1(solid-js@1.9.11)
       '@solid-primitive/utils':
         specifier: ^0.1.0-beta.1
         version: 0.1.0-beta.1(solid-js@1.9.11)
@@ -1412,11 +1406,6 @@ packages:
 
   '@solid-primitive/map@0.1.0-beta.1':
     resolution: {integrity: sha512-Lr/vhzA0JCm6Mbarok3XqDHIWvo768YDWmVoB0ZdMT25Qo2KM/6VAUkfmF7B3W9duj3Y+cfpbye8wCSw6EMZjg==}
-    peerDependencies:
-      solid-js: ^1.9.11
-
-  '@solid-primitive/motion@0.1.0-beta.1':
-    resolution: {integrity: sha512-XRjIoTbhKqycMic906zgC5ARkJfoU9AVQLHbHXX4DHbrB7JCPTd/I5aRmkbVxQqsGC68YSKJVmKYRyiOH1pFJg==}
     peerDependencies:
       solid-js: ^1.9.11
 
@@ -5038,11 +5027,6 @@ snapshots:
   '@solid-primitive/map@0.1.0-beta.1(solid-js@1.9.11)':
     dependencies:
       '@solid-primitive/trigger': 0.1.0-beta.1(solid-js@1.9.11)
-      solid-js: 1.9.11
-
-  '@solid-primitive/motion@0.1.0-beta.1(solid-js@1.9.11)':
-    dependencies:
-      '@solid-primitive/utils': 0.1.0-beta.1(solid-js@1.9.11)
       solid-js: 1.9.11
 
   '@solid-primitive/resize-observer@0.1.0-beta.1(solid-js@1.9.11)':

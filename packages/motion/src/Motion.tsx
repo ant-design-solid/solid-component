@@ -1,50 +1,24 @@
+import { getFirstChild, isElement } from "@solid-component/utils";
+import { makeEventListener } from "@solid-primitive/event-listener";
+import { access, noop } from "@solid-primitive/utils";
 import {
-  ElementOf,
-  Polymorphic,
-  PolymorphicProps,
-} from "@solid-component/polymorphic";
-import { access } from "@solid-primitive/utils";
-import { mergeRefs, mergeStyle } from "@solid-component/utils";
-import { createSwitchMotion } from "@solid-primitive/motion";
-import { makeRaf } from "@solid-primitive/scheduler";
-import {
+  children,
+  createComputed,
+  createEffect,
   createMemo,
   createSignal,
   mergeProps,
   onCleanup,
   Show,
-  splitProps,
-  untrack,
   type JSX,
-  type ValidComponent,
 } from "solid-js";
-import { createMotionRunner, type MotionHandlers } from "./motionRunner";
-import {
-  MotionEndEvent,
-  MotionName,
-  type MotionPhase,
-  type MotionStatus,
-} from "./types";
-
-export interface MotionLifecycle {
-  onAppearPrepare?: (el: HTMLElement) => void | Promise<void>;
-  onAppearStart?: (el: HTMLElement) => void;
-  onAppearActive?: (el: HTMLElement) => void;
-  onAppearEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
-
-  onEnterPrepare?: (el: HTMLElement) => void | Promise<void>;
-  onEnterStart?: (el: HTMLElement) => void;
-  onEnterActive?: (el: HTMLElement) => void;
-  onEnterEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
-
-  onLeavePrepare?: (el: HTMLElement) => void | Promise<void>;
-  onLeaveStart?: (el: HTMLElement) => void;
-  onLeaveActive?: (el: HTMLElement) => void;
-  onLeaveEnd?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
-}
+import createMotionRunner from "./motionRunner";
+import { MotionLifecycle, MotionName, type MotionStatus } from "./types";
+import { forceReflow, genHandlers } from "./util";
 
 export interface MotionOwnProps
   extends MotionLifecycle, Partial<Record<MotionStatus, boolean>> {
+  children?: JSX.Element;
   visible?: boolean;
   name?: MotionName;
   removeOnLeave?: boolean;
@@ -52,28 +26,9 @@ export interface MotionOwnProps
   deadline?: number;
   forceRender?: boolean;
   onVisibleChangeEnd?: (visible: boolean) => void;
-  children?: JSX.Element;
 }
 
-export interface MotionCommonProps<T extends HTMLElement> extends Pick<
-  JSX.HTMLAttributes<T>,
-  "ref" | "class" | "style"
-> {}
-
-export interface MotionProps<
-  T extends ValidComponent | HTMLElement = HTMLElement,
->
-  extends MotionOwnProps, MotionCommonProps<ElementOf<T>> {}
-
-interface MotionState {
-  phase: MotionPhase;
-  hidden: boolean;
-}
-
-const idleState = (hidden: boolean): MotionState => ({
-  phase: "none",
-  hidden,
-});
+export interface MotionProps extends MotionOwnProps {}
 
 const defaults = {
   appear: true,
@@ -81,183 +36,186 @@ const defaults = {
   leave: true,
   removeOnLeave: true,
 } as const;
-export default function Motion<T extends ValidComponent>(
-  props: PolymorphicProps<T, MotionProps<T>>,
-) {
-  const merged = mergeProps(defaults, props as MotionProps);
-  const [local, others] = splitProps(merged, [
-    "visible",
-    "name",
-    "appear",
-    "enter",
-    "leave",
-    "removeOnLeave",
-    "leavedClassName",
-    "deadline",
-    "forceRender",
-    "ref",
-    "class",
-    "style",
-    "children",
-    "onVisibleChangeEnd",
 
-    "onAppearPrepare",
-    "onAppearStart",
-    "onAppearActive",
-    "onAppearEnd",
-    "onEnterPrepare",
-    "onEnterStart",
-    "onEnterActive",
-    "onEnterEnd",
-    "onLeavePrepare",
-    "onLeaveStart",
-    "onLeaveActive",
-    "onLeaveEnd",
-  ]);
+export default function Motion(props: MotionProps) {
+  const merged = mergeProps(defaults, props);
 
-  const shouldAppear = !!local.visible && local.appear;
-  let hasAppeared = !shouldAppear;
-
-  const [elRef, setElRef] = createSignal<HTMLElement>();
-  const [motionState, setMotionState] = createSignal<MotionState>(
-    idleState(!local.visible),
+  const resolvedChildren = children(() => merged.children);
+  const elRef = createMemo(
+    () => getFirstChild(resolvedChildren(), isElement) as HTMLElement,
   );
-  const [hasBeenVisible, setHasBeenVisible] = createSignal(local.visible);
+  const initialVisible = !!access(merged.visible);
 
-  const isMoving = createMemo(() => motionState().phase !== "none");
-  const isLeaved = createMemo(() => !isMoving() && motionState().hidden);
+  let endCleanup: VoidFunction = noop;
+  let initialized = false;
+  let prevVisible = initialVisible;
 
-  const setIdle = (hidden: boolean, notifyVisibleChanged = false) => {
-    setMotionState(idleState(hidden));
-    if (notifyVisibleChanged) {
-      local.onVisibleChangeEnd?.(!hidden);
-    }
-  };
+  const [present, setPresent] = createSignal(initialVisible);
+  const [hasBeenVisible, setHasBeenVisible] = createSignal(initialVisible);
+  const [pendingStatus, setPendingStatus] = createSignal<MotionStatus>();
 
-  const motionHandlersMap: Record<MotionStatus, () => MotionHandlers> = {
-    appear: () => ({
-      prepare: local.onAppearPrepare,
-      start: local.onAppearStart,
-      active: local.onAppearActive,
-      end: local.onAppearEnd,
-    }),
-    enter: () => ({
-      prepare: local.onEnterPrepare,
-      start: local.onEnterStart,
-      active: local.onEnterActive,
-      end: local.onEnterEnd,
-    }),
-    leave: () => ({
-      prepare: local.onLeavePrepare,
-      start: local.onLeaveStart,
-      active: local.onLeaveActive,
-      end: local.onLeaveEnd,
-    }),
-  };
+  const motionHandlers = genHandlers(merged);
 
-  const runner = createMotionRunner(elRef, () => local.name, {
-    deadline: () => local.deadline,
-    onStep: (status, _step, hidden) => {
-      setMotionState({ phase: status, hidden });
+  const motionRunner = createMotionRunner({
+    name: () => merged.name,
+    deadline: () => merged.deadline,
+    async onStep(status, step) {
+      const el = elRef();
+
+      if (!el) return;
+
+      const handler = motionHandlers[status][step] ?? noop;
+
+      if (step === "prepare") {
+        endCleanup();
+        await handler(el);
+      } else if (step === "start") {
+        handler(el);
+        forceReflow(el);
+      } else {
+        handler(el);
+        endCleanup = bindMotionEnd(el);
+      }
     },
-    onFinish: (hidden) => {
-      setIdle(hidden);
+    onEnd(status, event) {
+      const el = elRef();
+
+      if (!el) return;
+
+      return motionHandlers[status].end?.(el, event);
     },
   });
 
-  const [raf, cancelEnterFrame] = makeRaf();
+  const finishVisible = (visible: boolean) => {
+    setPresent(visible);
+    merged.onVisibleChangeEnd?.(visible);
+  };
 
-  onCleanup(cancelEnterFrame);
+  const startMotion = (status: MotionStatus) => {
+    setPendingStatus(undefined);
 
-  const startTransition = (
-    status: MotionStatus,
-    enabled: boolean,
-    hiddenDuringMotion: boolean,
-    hiddenAfterDone: boolean,
-    done: () => void,
-  ) => {
-    const el = untrack(elRef);
-    if (!el) {
-      setIdle(hiddenAfterDone, true);
-      done();
+    const visibleAfterDone = status !== "leave";
+    motionRunner.start(status, {
+      enabled: merged[status],
+      onFinish() {
+        endCleanup();
+        finishVisible(visibleAfterDone);
+      },
+    });
+  };
+
+  const queueMotion = (status: MotionStatus) => {
+    if (status !== "leave") {
+      setPresent(true);
+      setHasBeenVisible(true);
+    }
+
+    setPendingStatus(status);
+  };
+
+  createComputed(() => {
+    const nextVisible = !!access(merged.visible);
+
+    if (!initialized) {
+      initialized = true;
+      prevVisible = nextVisible;
+
+      if (nextVisible) {
+        setPresent(true);
+        setHasBeenVisible(true);
+
+        if (merged.appear) {
+          queueMotion("appear");
+        } else {
+          merged.onVisibleChangeEnd?.(true);
+        }
+      } else {
+        setPresent(false);
+      }
+
       return;
     }
 
-    runner.start(
-      status,
-      enabled,
-      hiddenDuringMotion,
-      hiddenAfterDone,
-      motionHandlersMap[status](),
-      () => {
-        setIdle(hiddenAfterDone, true);
-        done();
+    if (nextVisible === prevVisible) {
+      return;
+    }
+
+    prevVisible = nextVisible;
+
+    queueMotion(nextVisible ? "enter" : "leave");
+  });
+
+  createEffect(() => {
+    const status = pendingStatus();
+    const el = elRef();
+
+    if (!status || !el) return;
+
+    startMotion(status);
+  });
+
+  onCleanup(() => {
+    endCleanup();
+    motionRunner.stop();
+  });
+
+  const bindMotionEnd = (el: HTMLElement) => {
+    const cleanup = makeEventListener(
+      el,
+      ["transitionend", "animationend"],
+      (event) => {
+        if (event.target !== el) return;
+
+        if (motionRunner.finish(event)) {
+          endCleanup();
+        }
       },
     );
-  };
 
-  const items = createSwitchMotion(
-    () => (access(local.visible) ? ("visible" as const) : undefined),
-    {
-      mode: "out-in",
-      appear: shouldAppear,
-      onEnter(_el: "visible", done: () => void) {
-        raf(() => {
-          const status: MotionStatus =
-            shouldAppear && !hasAppeared ? "appear" : "enter";
-          hasAppeared = true;
-          setHasBeenVisible(true);
-          startTransition(
-            status,
-            status === "appear" ? shouldAppear : local.enter,
-            motionState().hidden,
-            false,
-            done,
-          );
-        });
-      },
-      onExit(_el: "visible" | undefined, done: () => void) {
-        cancelEnterFrame();
-        startTransition("leave", local.leave, false, true, done);
-      },
-    },
-  );
+    return () => {
+      cleanup();
+      endCleanup = noop;
+    };
+  };
 
   const shouldRender = createMemo(
     () =>
-      local.forceRender ||
-      items().length > 0 ||
-      (!local.removeOnLeave && hasBeenVisible()),
+      merged.forceRender ||
+      present() ||
+      (!merged.removeOnLeave && hasBeenVisible()),
   );
 
-  const attrs = createMemo(() => {
-    const classes = [local.class];
-    let style = local.style ?? {};
+  createEffect(() => {
+    const el = elRef();
 
-    if (isLeaved()) {
-      if (local.leavedClassName) {
-        classes.unshift(local.leavedClassName);
+    if (!el) return;
+    const classes = [...motionRunner.state().classNames];
+
+    const leaved = shouldRender() && !present() && !access(merged.visible);
+    let memoryDisplay: string | undefined;
+    if (leaved) {
+      if (merged.leavedClassName) {
+        const leavedClasses = merged.leavedClassName
+          .split(/\s+/)
+          .filter(Boolean);
+        classes.push(...leavedClasses);
       } else {
-        style = mergeStyle(style, { display: "none" });
+        memoryDisplay = el.style.display;
+        el.style.display = "none";
       }
     }
 
-    return {
-      class: classes.filter(Boolean).join(" ") || undefined,
-      style,
-    };
+    el.classList.add(...classes);
+
+    onCleanup(() => {
+      el.classList.remove(...classes);
+
+      if (memoryDisplay != null) {
+        el.style.display = memoryDisplay;
+        memoryDisplay = undefined;
+      }
+    });
   });
 
-  return (
-    <Show when={shouldRender()}>
-      <Polymorphic<MotionOwnProps>
-        as="div"
-        ref={mergeRefs(local.ref, setElRef)}
-        {...attrs()}
-        {...others}
-      >
-        {local.children}
-      </Polymorphic>
-    </Show>
-  );
+  return <Show when={shouldRender()}>{resolvedChildren()}</Show>;
 }

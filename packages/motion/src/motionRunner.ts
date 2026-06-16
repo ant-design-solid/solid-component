@@ -1,199 +1,203 @@
-import { noop } from "@solid-primitive/utils";
-import { makeEventListener } from "@solid-primitive/event-listener";
-import { onCleanup, type Accessor } from "solid-js";
+import { access, noop, type MaybeAccessor } from "@solid-primitive/utils";
+import { createSignal } from "solid-js";
 import type {
   MotionEndEvent,
   MotionName,
   MotionStatus,
   MotionStep,
 } from "./types";
-import { forceReflow, getMotionClassNames, removeMotionClasses } from "./util";
+import { getMotionClassNames } from "./util";
 
-export interface MotionHandlers {
-  prepare?: (el: HTMLElement) => void | Promise<void>;
-  start?: (el: HTMLElement) => void;
-  active?: (el: HTMLElement) => void;
-  end?: (el: HTMLElement, event: MotionEndEvent) => boolean | void;
+type InternalMotionStep = Exclude<MotionStep, "end">;
+
+export interface MotionRunnerState {
+  status?: MotionStatus;
+  step?: InternalMotionStep;
+  classNames: string[];
 }
 
-interface MotionRunnerOptions {
-  deadline?: Accessor<number | undefined>;
+export interface MotionRunnerOptions {
+  name?: MaybeAccessor<MotionName | undefined>;
+  deadline?: MaybeAccessor<number | undefined>;
   onStep?: (
     status: MotionStatus,
-    step: Exclude<MotionStep, "idle" | "end">,
-    hidden: boolean,
-  ) => void;
-  onFinish?: (hidden: boolean) => void;
+    step: InternalMotionStep,
+    classNames: string[],
+  ) => void | Promise<void>;
+  onEnd?: (
+    status: MotionStatus,
+    event?: MotionEndEvent,
+    options?: {
+      force?: boolean;
+    },
+  ) => boolean | void;
 }
 
-type ActiveMotionConfig = {
-  deadline: number | undefined;
-  name: MotionName | undefined;
+export interface MotionStartOptions {
+  enabled?: boolean;
+  onFinish?: () => void;
+}
+
+const idleState: MotionRunnerState = {
+  classNames: [],
 };
 
-export function createMotionRunner(
-  element: Accessor<HTMLElement | undefined>,
-  name: Accessor<MotionName | undefined>,
-  options: MotionRunnerOptions = {},
+function getStepClassNames(
+  name: MotionName | undefined,
+  status: MotionStatus,
+  step: InternalMotionStep,
 ) {
-  const { deadline, onStep = noop, onFinish = noop } = options;
+  const {
+    root,
+    phase,
+    step: stepClass,
+  } = getMotionClassNames(name, status, step);
 
-  let disposed = false;
-  let motionRunId = 0;
-  let endCleanup: VoidFunction = noop;
+  return [root, phase, stepClass].filter(Boolean) as string[];
+}
 
-  const shouldWaitForMotionEnd = (
-    status: MotionStatus,
-    config: ActiveMotionConfig,
-  ) => {
-    const { root, phase, step } = getMotionClassNames(
-      config.name,
-      status,
-      "active",
-    );
-    return !!root || !!phase || !!step || config.deadline != null;
+function shouldWaitForMotionEnd(
+  name: MotionName | undefined,
+  status: MotionStatus,
+  deadline: number | undefined,
+) {
+  return (
+    getStepClassNames(name, status, "active").length > 0 || deadline != null
+  );
+}
+
+function nextFrame(fn: () => void) {
+  let frameId = requestAnimationFrame(() => {
+    frameId = requestAnimationFrame(fn);
+  });
+
+  return () => {
+    cancelAnimationFrame(frameId);
+  };
+}
+const returnFalse = () => false
+export default function createMotionRunner(options: MotionRunnerOptions = {}) {
+  const { onEnd = noop, onStep = noop } = options;
+  const [state, setState] = createSignal<MotionRunnerState>(idleState);
+
+  let runId = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let currentFinish: (event?: MotionEndEvent) => boolean = returnFalse;
+  let cancelFrame = noop;
+
+  const cleanupTimer = () => {
+    if (timer != null) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
   };
 
-  const applyMotionStepClasses = (
-    el: HTMLElement,
-    name: MotionName | undefined,
-    status: MotionStatus,
-    step: Exclude<MotionStep, "idle" | "end">,
-  ) => {
-    removeMotionClasses(el, name);
-    const {
-      root,
-      phase,
-      step: stepClass,
-    } = getMotionClassNames(name, status, step);
-    const classes = [root, phase, stepClass].filter(Boolean) as string[];
-    if (classes.length > 0) {
-      el.classList.add(...classes);
-    }
+  const stop = () => {
+    runId += 1;
+    cleanupTimer();
+    currentFinish = returnFalse;
+    setState(idleState);
+    cancelFrame();
   };
 
-  const finishMotion = (hidden: boolean, config: ActiveMotionConfig) => {
-    endCleanup();
-    const el = element();
-    if (el) {
-      removeMotionClasses(el, config.name);
-    }
-    onFinish(hidden);
-  };
-
-  const runMotion = (
+  const start = (
     status: MotionStatus,
-    enabled: boolean,
-    hiddenDuringMotion: boolean,
-    hiddenAfterDone: boolean,
-    handlers: MotionHandlers,
-    done: () => void,
+    startOptions: MotionStartOptions = {},
   ) => {
-    const el = element();
-    if (!el) {
-      onFinish(hiddenAfterDone);
-      done();
-      return;
-    }
+    const { enabled = true, onFinish = noop } = startOptions;
+    const name = access(options.name);
+    const deadline = access(options.deadline);
+    const currentRunId = runId + 1;
+    let finished = false;
 
-    const runId = ++motionRunId;
-    let completed = false;
-    const config = {
-      deadline: deadline?.(),
-      name: name(),
-    };
+    stop();
+    runId = currentRunId;
 
-    const complete = (event: MotionEndEvent) => {
-      if (completed || runId !== motionRunId) {
-        return;
-      }
+    const isStale = () => finished || runId !== currentRunId;
 
-      if (handlers.end?.(el, event) === false) {
-        return;
-      }
-
-      completed = true;
-      finishMotion(hiddenAfterDone, config);
-      done();
-    };
-
-    endCleanup();
-
-    const shouldWait = shouldWaitForMotionEnd(status, config);
-    if (!enabled || !shouldWait) {
-      // motion 被显式禁用时跳过 prepare；否则保留 prepare 语义，只是不等待结束事件。
-      if (!!enabled) {
-        void handlers.prepare?.(el);
-      }
-      handlers.start?.(el);
-      handlers.active?.(el);
-      handlers.end?.(el, { deadline: true } as MotionEndEvent);
-      finishMotion(hiddenAfterDone, config);
-      done();
-      return;
-    }
-
-    const runStep = (
-      step: Exclude<MotionStep, "idle" | "end">,
-      callback?: (el: HTMLElement) => void,
+    const finish = (
+      event?: MotionEndEvent,
+      finishOptions: {
+        callEnd?: boolean;
+        force?: boolean;
+      } = {},
     ) => {
-      callback?.(el);
-      onStep(status, step, hiddenDuringMotion);
-      applyMotionStepClasses(el, config.name, status, step);
+      const { callEnd = true, force = false } = finishOptions;
+
+      if (isStale()) return false;
+
+      if (callEnd && onEnd(status, event, { force }) === false && !force) {
+        return false;
+      }
+
+      finished = true;
+      cleanupTimer();
+      currentFinish = returnFalse;
+      setState(idleState);
+      onFinish();
+      return true;
+    };
+
+    currentFinish = finish;
+
+    const setStep = (step: InternalMotionStep) => {
+      const classNames = getStepClassNames(name, status, step);
+
+      setState({
+        status,
+        step,
+        classNames,
+      });
+
+      return onStep(status, step, classNames);
     };
 
     const advance = async () => {
-      onStep(status, "prepare", hiddenDuringMotion);
-      applyMotionStepClasses(el, config.name, status, "prepare");
-      await handlers.prepare?.(el);
-
-      if (disposed || completed || runId !== motionRunId || element() !== el) {
+      if (!enabled) {
+        finish({ deadline: true }, { callEnd: false });
         return;
       }
 
-      runStep("start", handlers.start);
+      await setStep("prepare");
 
-      forceReflow(el);
-      runStep("active", handlers.active);
+      if (isStale()) return;
 
-      const tryComplete = (event: MotionEndEvent) => {
-        if (!event.deadline && el !== event.target) return;
-        complete(event);
-      };
+      await setStep("start");
 
-      const cleanupListeners = makeEventListener(
-        el,
-        ["transitionend", "animationend"],
-        tryComplete,
-      );
-      const deadlineTimer =
-        config.deadline != null
-          ? setTimeout(() => {
-              tryComplete({ deadline: true } as MotionEndEvent);
-            }, config.deadline)
-          : null;
+      if (isStale()) return;
 
-      endCleanup = () => {
-        cleanupListeners();
-        if (deadlineTimer != null) {
-          clearTimeout(deadlineTimer);
-        }
-        endCleanup = noop;
-      };
+      cancelFrame();
+      await new Promise<void>((resolve) => {
+        cancelFrame = nextFrame(resolve);
+      });
+
+      await setStep("active");
+
+      if (!shouldWaitForMotionEnd(name, status, deadline)) {
+        finish({ deadline: true }, { force: true });
+        return;
+      }
+
+      if (deadline != null) {
+        timer = setTimeout(() => {
+          finish({ deadline: true }, { force: true });
+        }, deadline);
+      }
     };
 
     void advance();
-  };
 
-  onCleanup(() => {
-    disposed = true;
-    endCleanup();
-  });
+    return finish;
+  };
 
   return {
-    start: runMotion,
-    stop: () => {
-      endCleanup();
+    state,
+    start,
+    finish(event?: MotionEndEvent) {
+      return currentFinish(event);
     },
+    stop,
   };
 }
+
+export type MotionRunner = ReturnType<typeof createMotionRunner>;
