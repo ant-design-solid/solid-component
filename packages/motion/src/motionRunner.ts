@@ -66,15 +66,6 @@ function shouldWaitForMotionEnd(
   );
 }
 
-function nextFrame(fn: () => void) {
-  let frameId = requestAnimationFrame(() => {
-    frameId = requestAnimationFrame(fn);
-  });
-
-  return () => {
-    cancelAnimationFrame(frameId);
-  };
-}
 const returnFalse = () => false
 export default function createMotionRunner(options: MotionRunnerOptions = {}) {
   const { onEnd = noop, onStep = noop } = options;
@@ -83,7 +74,6 @@ export default function createMotionRunner(options: MotionRunnerOptions = {}) {
   let runId = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let currentFinish: (event?: MotionEndEvent) => boolean = returnFalse;
-  let cancelFrame = noop;
 
   const cleanupTimer = () => {
     if (timer != null) {
@@ -97,7 +87,6 @@ export default function createMotionRunner(options: MotionRunnerOptions = {}) {
     cleanupTimer();
     currentFinish = returnFalse;
     setState(idleState);
-    cancelFrame();
   };
 
   const start = (
@@ -165,11 +154,6 @@ export default function createMotionRunner(options: MotionRunnerOptions = {}) {
       await setStep("start");
 
       if (isStale()) return;
-
-      cancelFrame();
-      await new Promise<void>((resolve) => {
-        cancelFrame = nextFrame(resolve);
-      });
 
       await setStep("active");
 
