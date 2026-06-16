@@ -58,14 +58,13 @@ let lastMotionProps:
       onEnterPrepare?: (el: HTMLElement) => Promise<void> | void
       onLeavePrepare?: (el: HTMLElement) => Promise<void> | void
       onVisibleChangeEnd?: (visible: boolean) => Promise<void> | void
-      onMouseLeave?: (event: MouseEvent & { currentTarget: HTMLElement }) => void
     }
   | undefined
 
 vi.mock('@solid-component/motion', () => ({
-  default: (props: typeof lastMotionProps) => {
-    lastMotionProps = props
-    return null
+  default: (props: Record<string, unknown>) => {
+    lastMotionProps = props as unknown as typeof lastMotionProps
+    return props.children as unknown as JSX.Element
   },
 }))
 
@@ -186,19 +185,23 @@ describe('FloatingPopup', () => {
         type === 'hide' && action === 'hover',
     )
 
-    const { dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
+    const { host, dispose } = mount(() => <FloatingPopup>popup</FloatingPopup>)
     await flushMicrotasks()
 
-    lastMotionProps!.onMouseLeave!({ relatedTarget: null } as MouseEvent & {
-      currentTarget: HTMLElement
-    })
+    const popupEl = Array.from(host.querySelectorAll('*')).find(
+      el => el.textContent === 'popup',
+    ) as HTMLElement
+
+    // Simulate motion running - onEnterPrepare sets the motion guard
+    await lastMotionProps!.onEnterPrepare!(document.createElement('div'))
+
+    popupEl.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: null }))
 
     expect(setOpen).not.toHaveBeenCalled()
 
-    lastMotionProps!.onVisibleChangeEnd!(true)
-    lastMotionProps!.onMouseLeave!({ relatedTarget: null } as MouseEvent & {
-      currentTarget: HTMLElement
-    })
+    // Simulate motion ending - onVisibleChangeEnd clears the motion guard
+    await lastMotionProps!.onVisibleChangeEnd!(true)
+    popupEl.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: null }))
 
     expect(setOpen).toHaveBeenCalledWith(false, undefined)
 

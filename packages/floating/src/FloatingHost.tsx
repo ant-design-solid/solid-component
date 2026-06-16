@@ -59,15 +59,6 @@ export default function FloatingHost(props: FloatingHostProps) {
     const id = activeId();
     return id ? entries.get(id) : undefined;
   });
-  const activeContext = createMemo(() => {
-    const entry = activeEntry();
-    const context = entry?.context;
-    if (!context) return;
-    return {
-      ...context,
-      open: motionOpen,
-    } satisfies FloatingContextValue;
-  });
 
   let activeAt = 0;
   let motionToken = 0;
@@ -281,7 +272,6 @@ export default function FloatingHost(props: FloatingHostProps) {
     smooth,
     open: hostOpen,
     isActive: createSelector(activeId),
-    activeContext,
 
     register,
     activate(id) {

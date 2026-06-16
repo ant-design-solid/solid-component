@@ -137,7 +137,6 @@ export interface FloatingHostContextValue {
   smooth: Accessor<FloatingHostSmooth>;
   open: Accessor<boolean>;
   isActive: (id: string) => boolean;
-  activeContext: Accessor<FloatingContextValue | undefined>;
 
   register: (entry: Omit<FloatingPopupEntry, "activeAt">) => VoidFunction;
   activate: (id: string) => void;

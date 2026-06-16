@@ -40,9 +40,6 @@ const flushHostUpdate = async () => {
   await flushMicrotasks();
 };
 
-const getRenderedPopup = () =>
-  document.body.querySelector<HTMLElement>('[aria-hidden="false"]');
-
 const rootOptions: FloatingRootOptions = {
   defaultOpen: false,
   placement: "top",
@@ -92,6 +89,7 @@ function createEntryContext(id: string, text: string, x: number, y: number) {
     rootOptions: () => rootOptions,
     registerSubPopup: vi.fn(),
     contains: vi.fn(() => false),
+    host: () => undefined,
   };
 
   return {
@@ -449,10 +447,7 @@ describe("FloatingHost smooth", () => {
       }, false);
 
       createEffect(() => {
-        const activeContext = host!.activeContext();
-        if (!activeContext) return;
-
-        openRecords.push(activeContext.open());
+        openRecords.push(host!.open());
       });
 
       onCleanup(() => {
@@ -474,7 +469,8 @@ describe("FloatingHost smooth", () => {
     setSecondOpen(true);
     await flushHostUpdate();
 
-    expect(openRecords).toEqual([true, false, true]);
+    // host.open() stays true during switching (phase: opening→switching→opening)
+    expect(openRecords).toEqual([true]);
 
     dispose();
   });
@@ -488,8 +484,9 @@ describe("FloatingHost smooth", () => {
     second.context.open = secondOpenSignal;
 
     const getSurface = () =>
-      [...document.body.querySelectorAll<HTMLElement>('[aria-hidden="true"]')]
-        .find((node) => node.textContent === "");
+      [
+        ...document.body.querySelectorAll<HTMLElement>('[aria-hidden="true"]'),
+      ].find((node) => node.textContent === "");
 
     const Harness = () => {
       const host = useFloatingHostContext();
