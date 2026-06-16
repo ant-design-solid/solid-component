@@ -35,13 +35,6 @@ const SIZING_STYLE = [
   "tab-size",
 ] as const;
 
-interface TextAreaMeasurement {
-  height: number;
-  minHeight?: number;
-  maxHeight?: number;
-  overflowY?: "auto";
-}
-
 interface TextAreaSizingData {
   boxSizing: string;
   paddingSize: number;
@@ -68,7 +61,7 @@ function getHiddenTextarea(el: HTMLTextAreaElement) {
   }
 
   if (!hiddenTextarea.isConnected) {
-    (doc.body ?? doc.documentElement).appendChild(hiddenTextarea);
+    doc.body.appendChild(hiddenTextarea);
   }
 
   return hiddenTextarea;
@@ -91,11 +84,11 @@ function getTextAreaSizingData(el: HTMLTextAreaElement): TextAreaSizingData {
   };
 }
 
-function measureTextAreaHeight(
+export function measureTextAreaHeight(
   el: HTMLTextAreaElement,
   minRows?: number,
   maxRows?: number,
-): TextAreaMeasurement {
+) {
   const hiddenTextarea = getHiddenTextarea(el);
   const { boxSizing, paddingSize, borderSize, sizingStyle } =
     getTextAreaSizingData(el);
@@ -145,52 +138,10 @@ function measureTextAreaHeight(
   }
 
   return {
-    height,
-    minHeight,
-    maxHeight,
-    overflowY: maxHeight != null ? "auto" : undefined,
+    height: Math.round(height),
+    minHeight: minHeight && Math.round(minHeight),
+    maxHeight: maxHeight && Math.round(maxHeight),
   };
 }
 
-function applyMeasuredSize(
-  el: HTMLTextAreaElement,
-  measurement: TextAreaMeasurement,
-) {
-  let changed = false;
-
-  const nextHeight = `${measurement.height}px`;
-  if (el.style.height !== nextHeight) {
-    el.style.height = nextHeight;
-    changed = true;
-  }
-
-  const nextMinHeight =
-    measurement.minHeight != null ? `${measurement.minHeight}px` : "";
-  if (el.style.minHeight !== nextMinHeight) {
-    el.style.minHeight = nextMinHeight;
-    changed = true;
-  }
-
-  const nextMaxHeight =
-    measurement.maxHeight != null ? `${measurement.maxHeight}px` : "";
-  if (el.style.maxHeight !== nextMaxHeight) {
-    el.style.maxHeight = nextMaxHeight;
-    changed = true;
-  }
-
-  const nextOverflowY = measurement.overflowY ?? "";
-  if (el.style.overflowY !== nextOverflowY) {
-    el.style.overflowY = nextOverflowY;
-    changed = true;
-  }
-
-  return changed;
-}
-
-export default function resizeTextArea(
-  el: HTMLTextAreaElement,
-  minRows?: number,
-  maxRows?: number,
-) {
-  return applyMeasuredSize(el, measureTextAreaHeight(el, minRows, maxRows));
-}
+export type TextAreaMeasurement = ReturnType<typeof measureTextAreaHeight>;

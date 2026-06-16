@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import resizeTextArea from "./resizeTextArea";
+import { measureTextAreaHeight } from "./resizeTextArea";
 import { JSX } from "solid-js";
 
 const DEFAULT_STYLE: JSX.CSSProperties = {
@@ -80,12 +80,13 @@ describe("resizeTextArea", () => {
       "line-height": "10px",
     });
 
-    expect(resizeTextArea(textarea)).toBe(true);
-    expect(textarea.style.height).toBe("30px");
-    expect(textarea.style.minHeight).toBe("");
-    expect(textarea.style.maxHeight).toBe("");
-    expect(textarea.style.overflowY).toBe("");
-    expect(resizeTextArea(textarea)).toBe(false);
+    const r1 = measureTextAreaHeight(textarea);
+    expect(r1.height).toBe(30);
+    expect(r1.minHeight).toBeUndefined();
+    expect(r1.maxHeight).toBeUndefined();
+
+    const r2 = measureTextAreaHeight(textarea);
+    expect(r2.height).toBe(30);
   });
 
   it("uses placeholder text when the textarea value is empty", () => {
@@ -99,9 +100,9 @@ describe("resizeTextArea", () => {
       "line-height": "12px",
     });
 
-    expect(resizeTextArea(textarea)).toBe(true);
-    expect(textarea.style.height).toBe("24px");
-    expect(textarea.style.overflowY).toBe("");
+    const r = measureTextAreaHeight(textarea);
+    expect(r.height).toBe(24);
+    expect(r.maxHeight).toBeUndefined();
   });
 
   it("clamps border-box height with minRows and maxRows", () => {
@@ -117,11 +118,10 @@ describe("resizeTextArea", () => {
       "line-height": "12px",
     });
 
-    expect(resizeTextArea(textarea, 2, 3)).toBe(true);
-    expect(textarea.style.height).toBe("49px");
-    expect(textarea.style.minHeight).toBe("37px");
-    expect(textarea.style.maxHeight).toBe("49px");
-    expect(textarea.style.overflowY).toBe("auto");
+    const r = measureTextAreaHeight(textarea, 2, 3);
+    expect(r.height).toBe(49);
+    expect(r.minHeight).toBe(37);
+    expect(r.maxHeight).toBe(49);
   });
 
   it("keeps overflowY as auto for maxRows even when content does not overflow", () => {
@@ -133,10 +133,9 @@ describe("resizeTextArea", () => {
       "line-height": "12px",
     });
 
-    expect(resizeTextArea(textarea, undefined, 3)).toBe(true);
-    expect(textarea.style.height).toBe("12px");
-    expect(textarea.style.maxHeight).toBe("36px");
-    expect(textarea.style.overflowY).toBe("auto");
+    const r = measureTextAreaHeight(textarea, undefined, 3);
+    expect(r.height).toBe(12);
+    expect(r.maxHeight).toBe(36);
   });
 
   it("enforces minRows even when content is shorter than the minimum", () => {
@@ -148,11 +147,10 @@ describe("resizeTextArea", () => {
       "line-height": "14px",
     });
 
-    expect(resizeTextArea(textarea, 3)).toBe(true);
-    expect(textarea.style.height).toBe("42px");
-    expect(textarea.style.minHeight).toBe("42px");
-    expect(textarea.style.maxHeight).toBe("");
-    expect(textarea.style.overflowY).toBe("");
+    const r = measureTextAreaHeight(textarea, 3);
+    expect(r.height).toBe(42);
+    expect(r.minHeight).toBe(42);
+    expect(r.maxHeight).toBeUndefined();
   });
 
   it("reuses the hidden textarea and keeps wrap in sync", () => {
@@ -162,7 +160,7 @@ describe("resizeTextArea", () => {
     document.body.appendChild(first);
     setMockStyle(first);
 
-    resizeTextArea(first);
+    measureTextAreaHeight(first);
 
     const hiddenTextarea = document.querySelector(
       'textarea[name="hiddenTextarea"]',
@@ -175,7 +173,7 @@ describe("resizeTextArea", () => {
     document.body.appendChild(second);
     setMockStyle(second);
 
-    resizeTextArea(second);
+    measureTextAreaHeight(second);
 
     expect(
       document.querySelectorAll('textarea[name="hiddenTextarea"]'),
