@@ -8,10 +8,10 @@ import {
   createMemo,
   JSX,
   splitProps,
-  ValidComponent
+  ValidComponent,
 } from "solid-js";
 import { useSliderContext, useSliderThumbContext } from "./SliderContext";
-import { getThumbStyle } from "./utils/direction";
+import { getThumbStyle, isVerticalDirection } from "./utils/direction";
 
 interface SliderThumbCommonProps<
   T extends HTMLElement = HTMLElement,
@@ -61,9 +61,8 @@ export default function SliderThumb<T extends ValidComponent>(
   let thumbRef: HTMLElement | undefined;
 
   createEffect(() => {
-    const activeThumb = context.activeThumb();
     if (disabled() || !thumbRef) return;
-    if (activeThumb === thumb().id && document.activeElement !== thumbRef) {
+    if (context.isActive(thumb().id) && document.activeElement !== thumbRef) {
       thumbRef.focus();
     }
   });
@@ -133,7 +132,7 @@ export default function SliderThumb<T extends ValidComponent>(
   };
 
   const onBlur: SliderThumbCommonProps["onBlur"] = (event) => {
-    if (context.activeThumb() === thumb().id) {
+    if (context.isActive(thumb().id)) {
       context.setActiveThumb(undefined);
     }
     callHandler(event, local.onBlur);
@@ -146,9 +145,7 @@ export default function SliderThumb<T extends ValidComponent>(
       role="slider"
       tabIndex={context.disabled() ? undefined : (local.tabIndex ?? 0)}
       aria-orientation={
-        context.direction() === "ltr" || context.direction() === "rtl"
-          ? "horizontal"
-          : "vertical"
+        isVerticalDirection(context.direction()) ? "vertical" : "horizontal"
       }
       aria-valuemin={thumb().min()}
       aria-valuemax={thumb().max()}

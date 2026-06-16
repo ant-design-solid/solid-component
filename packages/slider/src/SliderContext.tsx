@@ -20,7 +20,7 @@ export interface SliderContextValue<T extends SliderValue = SliderValue> {
   values: Accessor<number[]>;
   thumbs: Accessor<SliderThumbState[]>;
   getValuePercent: (value: number) => number;
-  activeThumb: Accessor<string | undefined>;
+  isActive: (id: string) => boolean
   setActiveThumb: (id?: string) => void;
   setThumbValue: (id: string, nextValue: number) => number[] | null;
   beginSlide: (

@@ -2,7 +2,7 @@ import { JSX } from "solid-js";
 
 export type SliderDirection = "ltr" | "rtl" | "ttb" | "btt";
 
-function isVerticalDirection(direction: SliderDirection) {
+export function isVerticalDirection(direction: SliderDirection) {
   return direction === "ttb" || direction === "btt";
 }
 

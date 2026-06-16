@@ -7,6 +7,7 @@ import {
   batch,
   createEffect,
   createMemo,
+  createSelector,
   createSignal,
   JSX,
   mergeProps,
@@ -482,7 +483,7 @@ export default function SliderRoot<
     thumbs,
     getValuePercent,
 
-    activeThumb,
+    isActive: createSelector(activeThumb),
     setActiveThumb,
 
     setThumbValue: updateThumbValue,
