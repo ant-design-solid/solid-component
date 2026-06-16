@@ -146,6 +146,8 @@ export default function MenuRoot<T extends ValidComponent>(
   const [overflowInfo, setOverflowInfo] =
     createSignal<OverflowChangeInfo>(emptyOverflowInfo);
   const [rootRef, setRootRef] = createSignal<HTMLElement>();
+  const isActive = createSelector(activeKey)
+
   const { registry, items, ordered, register, unregister } =
     createOrderedRegistry<MenuEntry>({
       rootRef,
@@ -430,8 +432,7 @@ export default function MenuRoot<T extends ValidComponent>(
 
     selectedKeys,
     openKeys,
-    activeKey,
-
+    isActive,
     setActiveKey,
     register: (entry) => {
       const key = untrack(entry.key);

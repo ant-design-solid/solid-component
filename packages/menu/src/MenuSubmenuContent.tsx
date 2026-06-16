@@ -1,6 +1,6 @@
 import { FloatingPopup } from "@solid-component/floating";
 import Motion from "@solid-component/motion";
-import {
+import Polymorphic, {
   type ElementOf,
   type PolymorphicProps,
 } from "@solid-component/polymorphic";
@@ -40,16 +40,16 @@ function InternalInlineContent<T extends ValidComponent>(
   const motion = () => local.motion ?? rootMotion();
 
   return (
-    <Motion
-      visible={open()}
-      as="ul"
-      role="menu"
-      tabIndex={-1}
-      aria-hidden={!open()}
-      hidden={!open()}
-      {...motion()}
-      {...rest}
-    />
+    <Motion visible={open()} {...motion()}>
+      <Polymorphic
+        as="ul"
+        role="menu"
+        tabIndex={-1}
+        aria-hidden={!open()}
+        hidden={!open()}
+        {...rest}
+      />
+    </Motion>
   );
 }
 

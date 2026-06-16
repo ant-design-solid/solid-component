@@ -48,7 +48,7 @@ export default function MenuMore<T extends ValidComponent>(
     direction,
     disabled,
     popup,
-    activeKey,
+    isActive,
     setActiveKey,
     register,
     get,
@@ -92,7 +92,7 @@ export default function MenuMore<T extends ValidComponent>(
           <FloatingTrigger
             ref={mergeRefs(local.ref, setTriggerRef)}
             role="menuitem"
-            tabIndex={activeKey() === MENU_MORE_KEY ? 0 : -1}
+            tabIndex={isActive(MENU_MORE_KEY) ? 0 : -1}
             aria-haspopup="menu"
             aria-disabled={disabled() || undefined}
             data-menu-key={MENU_MORE_KEY}

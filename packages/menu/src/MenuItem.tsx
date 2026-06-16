@@ -6,7 +6,6 @@ import Polymorphic, {
 } from "@solid-component/polymorphic";
 import { composeHandlers, error, mergeRefs } from "@solid-component/utils";
 import {
-  createEffect,
   createMemo,
   createSignal,
   createUniqueId,
@@ -19,8 +18,8 @@ import {
 import { Dynamic } from "solid-js/web";
 import {
   MenuSubmenuContextValue,
-  useMenuOverflowPopupContext,
   useMenuContext,
+  useMenuOverflowPopupContext,
   useMenuSubmenuContentContext,
   useMenuSubmenuContext,
 } from "./MenuContext";
@@ -104,14 +103,22 @@ function MenuOverflowItem<T extends ValidComponent>(
   const [ref, setRef] = createSignal<HTMLElement>();
   const disabled = createMemo(() => root.disabled() || !!local.disabled);
   const selected = createMemo(() => root.isSelected(local.key!));
-  const active = createMemo(() => root.activeKey() === local.key);
-  const open = createMemo(() => false);
-  const state = createMemo<MenuItemRenderState>(() => ({
-    selected: selected(),
-    disabled: disabled(),
-    active: active(),
-    open: open(),
-  }));
+  const active = () => local.key != null && root.isActive(local.key);
+  const open = () => false;
+  const state = {
+    get selected() {
+      return selected();
+    },
+    get disabled() {
+      return disabled();
+    },
+    get active() {
+      return active();
+    },
+    get open() {
+      return open();
+    },
+  };
 
   const activate = (event: MouseEvent | KeyboardEvent) => {
     if (disabled() || local.key === undefined) {
@@ -126,14 +133,18 @@ function MenuOverflowItem<T extends ValidComponent>(
   };
 
   const onMouseEnter: MenuItemProps["onMouseEnter"] = () => {
-    if (disabled() || local.key === undefined) return;
+    if (disabled() || local.key == null) return;
     root.setActiveKey(local.key);
   };
 
   const onMouseLeave: MenuItemProps["onMouseLeave"] = () => {
     const node = ref();
 
-    if (root.activeKey() === local.key && document.activeElement !== node) {
+    if (
+      local.key &&
+      root.isActive(local.key) &&
+      document.activeElement !== node
+    ) {
       root.setActiveKey(undefined);
     }
   };
@@ -189,7 +200,7 @@ function MenuOverflowItem<T extends ValidComponent>(
       {...rest}
     >
       {typeof local.children === "function"
-        ? local.children(state())
+        ? local.children(state)
         : local.children}
     </MenuItemView>
   );
@@ -241,7 +252,7 @@ export default function MenuItem<T extends ValidComponent>(
   const selected = createMemo(() =>
     submenu() ? submenu()!.selected() : root.isSelected(key()!),
   );
-  const active = createMemo(() => root.activeKey() === key());
+  const active = createMemo(() => root.isActive(key()));
   const open = createMemo(() => submenu()?.open() ?? false);
   const useOverflow = createMemo(
     () =>
@@ -267,7 +278,7 @@ export default function MenuItem<T extends ValidComponent>(
   };
 
   if (!inOverflowPopup) {
-    onCleanup(root.register(entry))
+    onCleanup(root.register(entry));
   }
 
   const state = createMemo<MenuItemRenderState>(() => ({
@@ -332,7 +343,7 @@ export default function MenuItem<T extends ValidComponent>(
   const onMouseLeave: MenuItemProps["onMouseLeave"] = () => {
     const node = ref();
 
-    if (root.activeKey() === key() && document.activeElement !== node) {
+    if (active() && document.activeElement !== node) {
       root.setActiveKey(undefined);
     }
   };

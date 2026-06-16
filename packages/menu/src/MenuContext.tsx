@@ -47,8 +47,7 @@ export interface MenuContextValue {
 
   selectedKeys: Accessor<MenuKey[]>;
   openKeys: Accessor<MenuKey[]>;
-  activeKey: Accessor<MenuKey | undefined>;
-
+  isActive: (key: MenuKey) => boolean
   setActiveKey: (key: MenuKey | undefined) => void;
   register: (entry: MenuEntry) => VoidFunction;
   get: (key: MenuKey) => MenuEntry | undefined;
