@@ -20,12 +20,10 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@solid-component/utils": "workspace:^",
-    "@solid-component/polymorphic": "workspace:^"
+    "@solid-component/utils": "workspace:^"
   },
   "peerDependencies": {
-    "@solid-component/utils": "^0.1.0-beta.1",
-    "@solid-primitive/event-listener": "^0.1.0-beta.1",
+    "@solid-primitive/event-listener": "^0.1.0-beta.3",
     "@solid-primitive/utils": "^0.1.0-beta.1",
     "solid-js": "^1.6.5"
   },
