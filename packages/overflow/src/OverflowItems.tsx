@@ -16,7 +16,7 @@ import {
 import type { OverflowItemKey } from "./types";
 
 export interface OverflowItemsOwnProps<T extends readonly any[]> {
-  by?: KeyOf<ValueOf<T>> | ((item: T[number]) => OverflowItemKey);
+  itemKey?: KeyOf<ValueOf<T>> | ((item: T[number]) => OverflowItemKey);
   data: T | undefined | null | false;
   fallback?: JSX.Element;
   children: (item: T[number], index: Accessor<number>) => JSX.Element;
@@ -100,18 +100,18 @@ export default function OverflowItems<T extends readonly any[]>(
     <For each={measuredSource()} fallback={props.fallback}>
       {(item, index) => {
         const sourceIndex = createMemo(() => measuredStartIndex() + index());
-        const id = () => {
-          if (typeof props.by === "function") {
-            return props.by(item);
+        const key = () => {
+          if (typeof props.itemKey === "function") {
+            return props.itemKey(item);
           }
-          if (props.by != null) {
-            return item?.[props.by] ?? sourceIndex();
+          if (props.itemKey != null) {
+            return item?.[props.itemKey] ?? sourceIndex();
           }
           return sourceIndex();
         };
 
         const itemContext = {
-          key: id(),
+          key: key()!,
           index: sourceIndex,
         } satisfies OverflowItemContextValue;
 

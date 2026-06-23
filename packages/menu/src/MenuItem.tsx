@@ -50,7 +50,6 @@ export interface MenuItemProps<
 interface MenuItemViewProps {
   submenu?: MenuSubmenuContextValue;
   active?: boolean;
-  menuKey?: MenuKey;
   disabled?: boolean;
   selected?: boolean;
 }
@@ -61,7 +60,6 @@ function MenuItemView<T extends ValidComponent>(
   const [local, rest] = splitProps(props as MenuItemViewProps, [
     "submenu",
     "active",
-    "menuKey",
     "selected",
     "disabled",
   ]);
@@ -76,7 +74,6 @@ function MenuItemView<T extends ValidComponent>(
       aria-controls={local.submenu?.id}
       aria-disabled={local.disabled || undefined}
       aria-selected={local.selected}
-      data-menu-key={local.menuKey}
       {...rest}
     >
       {props.children}
@@ -191,7 +188,7 @@ function MenuOverflowItem<T extends ValidComponent>(
       active={active()}
       selected={selected()}
       disabled={disabled()}
-      menuKey={local.key}
+      data-menu-key={local.key}
       onClick={composeHandlers(local.onClick, onClick)}
       onMouseEnter={composeHandlers(local.onMouseEnter, onMouseEnter)}
       onMouseLeave={composeHandlers(local.onMouseLeave, onMouseLeave)}
@@ -414,7 +411,7 @@ export default function MenuItem<T extends ValidComponent>(
       active={active()}
       disabled={disabled()}
       selected={selected()}
-      menuKey={key()}
+      data-menu-key={key()}
       onClick={composeHandlers(local.onClick, onClick)}
       onMouseEnter={composeHandlers(local.onMouseEnter, onMouseEnter)}
       onMouseLeave={composeHandlers(local.onMouseLeave, onMouseLeave)}

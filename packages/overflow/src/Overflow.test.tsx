@@ -30,7 +30,7 @@ function getHiddenStates(...elements: HTMLElement[]) {
 
 function DataItems() {
   return (
-    <Overflow.Items data={items} by="key">
+    <Overflow.Items data={items} itemKey="key">
       {(item) => <Overflow.Item as="li">{item.label}</Overflow.Item>}
     </Overflow.Items>
   );
@@ -56,7 +56,7 @@ describe("Overflow", () => {
       <Overflow
         as="ul"
         data={items}
-        by="key"
+        itemKey="key"
         maxCount={2}
         rest={renderRest}
         onOverflowChange={onOverflowChange}

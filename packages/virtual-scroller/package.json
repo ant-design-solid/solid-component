@@ -1,0 +1,25 @@
+{
+  "name": "@solid-component/virtual-scroller",
+  "version": "0.1.0-beta.1",
+  "description": "Headless virtual scrolling hook for SolidJS",
+  "author": "Kory Lee <https://github.com/korylee>",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "scripts": {
+    "build": "tsdown"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@solid-primitive/scheduler": "^0.1.0-beta.1",
+    "@solid-primitive/event-listener": "^0.1.0-beta.1",
+    "@solid-primitive/utils": "^0.1.0-beta.1",
+    "@solid-primitive/resize-observer": "^0.1.0-beta.1",
+    "solid-js": "^1.6.5"
+  },
+  "license": "ISC"
+}

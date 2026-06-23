@@ -309,6 +309,24 @@ importers:
         specifier: ^1.6.5
         version: 1.9.11
 
+  packages/virtual-scroller:
+    dependencies:
+      '@solid-primitive/event-listener':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.3(@solid-primitive/utils@0.1.0-beta.1(solid-js@1.9.11))(solid-js@1.9.11)
+      '@solid-primitive/resize-observer':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/scheduler':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      '@solid-primitive/utils':
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1(solid-js@1.9.11)
+      solid-js:
+        specifier: ^1.6.5
+        version: 1.9.11
+
 packages:
 
   '@acemir/cssom@0.9.31':

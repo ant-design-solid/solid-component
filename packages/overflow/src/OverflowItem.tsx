@@ -9,6 +9,7 @@ import { ValueOf } from "@solid-primitive/utils";
 import {
   createMemo,
   createSignal,
+  createUniqueId,
   JSX,
   mergeProps,
   onCleanup,
@@ -21,7 +22,7 @@ import {
   useOverflowContext,
   useOverflowItemContext,
 } from "./OverflowContext";
-import type { OverflowItemKey } from "./types";
+import type { OverflowItemKey, OverflowRange } from "./types";
 
 export const InternalItemVisibility = {
   visible: "visible",
@@ -165,31 +166,31 @@ export default function OverflowItem<T extends ValidComponent>(
   } = useOverflowContext();
   const itemContext = useOverflowItemContext();
 
-  const id = Symbol("overflow-item");
+  const id = createUniqueId();
   const [itemRef, setItemRef] = createSignal<HTMLElement>();
   const [width, setWidth] = createSignal<number | null>(null);
-  const order = createMemo(() => getItemOrder(id)!);
-  const inVisibleRange = () => {
+  const order = () => getItemOrder(id)!;
+
+  const inRange = (range: OverflowRange) => {
     const currentOrder = order();
-    const [start, end] = visibleRange();
+    const [start, end] = range;
     return currentOrder >= start && currentOrder <= end;
   };
+
   const inPreviewRange = () => {
     const range = previewRange();
     if (!range) {
       return false;
     }
 
-    const currentOrder = order();
-    const [start, end] = range;
-    return currentOrder >= start && currentOrder <= end;
+    return inRange(range)
   };
   const visibility = createMemo<InternalItemVisibility>(() => {
     if (responsive() && measuring()) {
       return inPreviewRange() ? VISIBLE : MEASURE;
     }
 
-    return inVisibleRange() ? VISIBLE : HIDDEN;
+    return inRange(visibleRange()) ? VISIBLE : HIDDEN;
   });
 
   const record = {

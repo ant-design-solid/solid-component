@@ -433,7 +433,7 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "OverflowItems.tsx"
     },
     {
-      "name": "OverflowItemUid",
+      "name": "OverflowItemId",
       "kind": "type",
       "source": "types.ts"
     },
@@ -488,7 +488,7 @@ export const generatedPackageApi: Record<string, GeneratedPackageApiItem[]> = {
       "source": "OverflowSuffix.tsx"
     },
     {
-      "name": "OverflowVisibleRange",
+      "name": "OverflowRange",
       "kind": "type",
       "source": "types.ts"
     }

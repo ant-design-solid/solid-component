@@ -50,7 +50,6 @@ export type {
   OverflowCollapse,
   OverflowItemKey,
   OverflowItemRecord,
-  OverflowItemUid,
   OverflowChangeInfo,
-  OverflowVisibleRange,
+  OverflowRange,
 } from "./types";

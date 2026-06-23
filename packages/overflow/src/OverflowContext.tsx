@@ -1,12 +1,11 @@
 import { error } from "@solid-component/utils";
 import { createContext, useContext, type Accessor } from "solid-js";
 import type {
+  OverflowChangeInfo,
   OverflowCollapse,
   OverflowItemKey,
   OverflowItemRecord,
-  OverflowItemUid,
-  OverflowChangeInfo,
-  OverflowVisibleRange,
+  OverflowRange,
 } from "./types";
 
 export interface OverflowContextValue {
@@ -18,12 +17,12 @@ export interface OverflowContextValue {
   showRest: Accessor<boolean>;
   shouldExpand: Accessor<boolean>;
   previewCount: Accessor<number | null>;
-  previewRange: Accessor<OverflowVisibleRange | null>;
+  previewRange: Accessor<OverflowRange | null>;
 
   sourceCount: Accessor<number>;
   setSourceCount(count: number | null): void;
 
-  visibleRange: Accessor<OverflowVisibleRange>;
+  visibleRange: Accessor<OverflowRange>;
   changeInfo: Accessor<OverflowChangeInfo>;
 
   suffixInsetStart: Accessor<number | null>;
@@ -33,7 +32,7 @@ export interface OverflowContextValue {
 
   register(options: OverflowItemRecord): VoidFunction;
 
-  getItemOrder(id: OverflowItemUid): number | undefined;
+  getItemOrder(id: OverflowItemRecord["id"]): number | undefined;
   getItemOrder(record: OverflowItemRecord): number | undefined;
 }
 
@@ -52,7 +51,7 @@ export function useOverflowContext() {
 }
 
 export interface OverflowItemContextValue {
-  key?: OverflowItemKey;
+  key: OverflowItemKey;
   index: Accessor<number>;
 }
 

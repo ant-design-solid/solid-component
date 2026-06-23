@@ -22,7 +22,7 @@ import type {
   OverflowCollapse,
   OverflowItemKey,
   OverflowItemRecord,
-  OverflowVisibleRange,
+  OverflowRange,
 } from "./types";
 
 const RESPONSIVE = "responsive" as const;
@@ -80,7 +80,7 @@ export default function OverflowRoot<T extends ValidComponent>(
   >(null);
   const [ready, setReady] = createSignal(false);
   const [measuredOnce, setMeasuredOnce] = createSignal(false);
-  const [visibleRange, setVisibleRange] = createSignal<OverflowVisibleRange>([
+  const [visibleRange, setVisibleRange] = createSignal<OverflowRange>([
     0, 0,
   ]);
   const [suffixInsetStart, setSuffixInsetStart] = createSignal<number | null>(
@@ -99,7 +99,7 @@ export default function OverflowRoot<T extends ValidComponent>(
     () => ordered().length > 0 && isResponsive(),
   );
   const isInvalidate = createMemo(() => local.maxCount === INVALIDATE);
-  const collapse = createMemo(() => local.collapse);
+  const collapse = () => local.collapse;
   const isStartCollapse = () => collapse() === "start";
   const showRest = createMemo(
     () =>
@@ -132,7 +132,7 @@ export default function OverflowRoot<T extends ValidComponent>(
 
     return Math.max(1, Math.floor(container / preview.itemWidth));
   });
-  const previewRange = createMemo<OverflowVisibleRange | null>(() => {
+  const previewRange = createMemo<OverflowRange | null>(() => {
     if (!measuring()) {
       return null;
     }
